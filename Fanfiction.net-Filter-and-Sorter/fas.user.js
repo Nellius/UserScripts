@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.71
+// @version      0.72
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -540,33 +540,30 @@
         clear.textContent = 'Clear';
         clear.className = 'gray';
         clear.addEventListener('click', (e) => {
-            const selectTags = Object.keys(filterDic)
+            const enabledSelectTags = Object.keys(filterDic)
                 .map(x => tabId + '_' + x + '_select')
-                .map(x => document.getElementById(x));
+                .map(x => document.getElementById(x))
+                .filter(x => !x.hasAttribute('disabled'));
 
-            const changed = !(selectTags.every(x => x.value === 'default'));
+            const changed = !(enabledSelectTags.every(x => x.value === 'default'));
             if (changed) {
-                selectTags.forEach(x => {
+                enabledSelectTags.forEach(x => {
                     x.value = 'default';
                 });
                 const storyDic = makeStoryDic();
                 Object.keys(storyDic).forEach(x => changeStoryDisplay(storyDic[x]));
 
-                [...selectTags].forEach(selectTag => {
-                    const disabled = selectTag.hasAttribute('disabled');
+                [...enabledSelectTags].forEach(selectTag => {
+                    selectTag.value = 'default';
                     const optionTags = selectTag.getElementsByTagName('option');
-                    if (!disabled) {
-                        [...optionTags].forEach(option => option.removeAttribute('hidden'));
+                    [...optionTags].forEach(option => option.removeAttribute('hidden'));
 
-                        if (optionTags.length === 2) {
-                            selectTag.classList.add('fas-filter-menu_locked');
-                        } else {
-                            selectTag.classList.remove('fas-filter-menu_locked');
-                        }
-                        selectTag.classList.remove('fas-filter-menu_selected');
+                    if (optionTags.length === 2) {
+                        selectTag.classList.add('fas-filter-menu_locked');
                     } else {
-                        optionTags[1].setAttribute('selected');
+                        selectTag.classList.remove('fas-filter-menu_locked');
                     }
+                    selectTag.classList.remove('fas-filter-menu_selected');
                 });
 
                 const badge = document.getElementById('l_' + tabId).firstElementChild;
