@@ -4,7 +4,7 @@
 
 Add filters and additional sorters to author page of Fanfiction.net.
 
-[\[Install\]](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Source\]](https://github.com/Nellius/UserScripts/blob/master/Fanfiction.net-Filter-and-Sorter/fas.user.js)
+[\[Install\]](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Source\]](https://github.com/Nellius/UserScripts/blob/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Greasy Fork\]](https://greasyfork.org/ja/scripts/377000-fanfiction-net-filter-and-sorter)
 
 ### Filters by
 
@@ -24,9 +24,9 @@ Add filters and additional sorters to author page of Fanfiction.net.
 - Favs
 - Follows
 
-### Screenshot
+### Demo
 
-![screenshot](images/fas-screenshot.png)
+![demo](images/fas-demo.gif)
 
 ## Compatible
 
