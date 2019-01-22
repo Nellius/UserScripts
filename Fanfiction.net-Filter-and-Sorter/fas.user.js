@@ -558,13 +558,12 @@
                 [...enabledSelectTags].forEach(selectTag => {
                     selectTag.value = 'default';
                     const optionTags = selectTag.getElementsByTagName('option');
-                    [...optionTags].forEach(option => option.removeAttribute('hidden'));
+                    [...optionTags].forEach(option => {
+                        option.removeAttribute('hidden');
+                        option.classList.remove('fas-filter-menu-item_locked');
+                    });
 
-                    if (optionTags.length === 2) {
-                        selectTag.classList.add('fas-filter-menu_locked');
-                    } else {
-                        selectTag.classList.remove('fas-filter-menu_locked');
-                    }
+                    selectTag.classList.remove('fas-filter-menu_locked');
                     selectTag.classList.remove('fas-filter-menu_selected');
                 });
 
