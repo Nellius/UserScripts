@@ -14,16 +14,16 @@
 
     // setting
     const filterDic = {
-        fandom: { text: 'Fandom', mode: 'contain' },
-        crossover: { text: 'Crossover ?', mode: 'equal' },
-        rating: { text: 'Rating', mode: 'equal' },
-        language: { text: 'Language', mode: 'equal' },
-        genre: { text: 'Genre', mode: 'contain' },
-        word_count_gt: { text: 'Words <', mode: 'gt' },
-        word_count_le: { text: '≤ Words', mode: 'le' },
-        character_a: { text: 'Character A', mode: 'contain' },
-        character_b: { text: 'Character B', mode: 'contain' },
-        status: { text: 'Status', mode: 'equal' }
+        fandom: { text: 'Fandom', title: 'Fandom filter', mode: 'contain' },
+        crossover: { text: 'Crossover ?', title: 'Crossover filter', mode: 'equal' },
+        rating: { text: 'Rating', title: 'Rating filter', mode: 'equal' },
+        language: { text: 'Language', title: 'Language filter', mode: 'equal' },
+        genre: { text: 'Genre', title: 'Genre filter', mode: 'contain' },
+        word_count_gt: { text: 'Words <', title: 'Word count greater than filter', mode: 'gt' },
+        word_count_le: { text: '≤ Words', title: 'Word count less or equal filter', mode: 'le' },
+        character_a: { text: 'Character A', title: 'Character filter a', mode: 'contain' },
+        character_b: { text: 'Character B', title: 'Character filter b', mode: 'contain' },
+        status: { text: 'Status', title: 'Status filer', mode: 'equal' }
     };
 
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K'];
@@ -453,6 +453,7 @@
         const makeSelectTag = (filterKey, defaultText) => {
             const selectTag = document.createElement('select');
             selectTag.id = tabId + '_' + filterKey + '_select';
+            selectTag.title = filterDic[filterKey].title;
             selectTag.classList.add('fas-filter-menu');
             const defaultOption = document.createElement('option');
             defaultOption.textContent = defaultText;
@@ -538,6 +539,7 @@
 
         const clear = document.createElement('span');
         clear.textContent = 'Clear';
+        clear.title = "Reset filter values to default";
         clear.className = 'gray';
         clear.addEventListener('click', (e) => {
             const enabledSelectTags = Object.keys(filterDic)
