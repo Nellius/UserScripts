@@ -19,8 +19,8 @@
         rating: { text: 'Rating', title: 'Rating filter', mode: 'equal' },
         language: { text: 'Language', title: 'Language filter', mode: 'equal' },
         genre: { text: 'Genre', title: 'Genre filter', mode: 'contain' },
-        word_count_gt: { text: 'Words <', title: 'Word count greater than filter', mode: 'gt' },
-        word_count_le: { text: '≤ Words', title: 'Word count less or equal filter', mode: 'le' },
+        word_count_gt: { text: '< Words', title: 'Word count greater than filter', mode: 'gt' },
+        word_count_le: { text: 'Words ≤', title: 'Word count less or equal filter', mode: 'le' },
         character_a: { text: 'Character A', title: 'Character filter a', mode: 'contain' },
         character_b: { text: 'Character B', title: 'Character filter b', mode: 'contain' },
         status: { text: 'Status', title: 'Status filer', mode: 'equal' }
