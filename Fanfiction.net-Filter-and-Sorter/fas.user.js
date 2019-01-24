@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.73
+// @version      0.8
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -21,12 +21,16 @@
         genre: { text: 'Genre', title: 'Genre filter', mode: 'contain' },
         word_count_gt: { text: '< Words', title: 'Word count greater than filter', mode: 'gt' },
         word_count_le: { text: 'Words ≤', title: 'Word count less or equal filter', mode: 'le' },
+        reviews: { text: 'Reviews', title: 'Review count greater than or equal filter', mode: 'ge' },
+        favs: { text: 'Favs', title: 'Fav count greater than or equal filter', mode: 'ge' },
+        follows: { text: 'Follows', title: 'Follow count greater than or equal filter', mode: 'ge' },
         character_a: { text: 'Character A', title: 'Character filter a', mode: 'contain' },
         character_b: { text: 'Character B', title: 'Character filter b', mode: 'contain' },
         status: { text: 'Status', title: 'Status filer', mode: 'equal' }
     };
 
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K'];
+    const kudoCountOptions = ['0', '10', '50', '100', '200', '400', '600', '800', '1K'];
 
     // css
     // eslint-disable-next-line no-undef
@@ -228,17 +232,20 @@
                 return true;
             } else {
                 const filterMode = filterDic[filterKey].mode;
-
                 if (filterMode === 'equal') {
                     return storyValue === selectValue;
                 } else if (filterMode === 'contain') {
                     return storyValue.includes(selectValue);
-                } else if (filterMode === 'gt') {
-                    const intSelectValue = parseInt(selectValue.replace(/K/, '000').slice(0, -2));
-                    return storyValue > intSelectValue;
-                } else if (filterMode === 'le') {
-                    const intSelectValue = parseInt(selectValue.replace(/K/, '000').slice(2));
-                    return Number.isNaN(intSelectValue) || storyValue <= intSelectValue;
+                } else if (['gt', 'ge', 'le'].includes) {
+                    const execResult = /\d+/.exec(selectValue.replace(/K/, '000'));
+                    const intSelectValue = execResult ? parseInt(execResult[0]) : null;
+                    if (filterMode === 'gt') {
+                        return storyValue > intSelectValue;
+                    } else if (filterMode === 'ge') {
+                        return storyValue >= intSelectValue;
+                    } else if (filterMode === 'le') {
+                        return intSelectValue === null || storyValue <= intSelectValue;
+                    }
                 }
             }
         };
@@ -334,30 +341,28 @@
                         .filter((x, i, self) => self.indexOf(x) === i)
                         .sort((a, b) => a - b);
 
-                    // redefine usableOptionValues for word_count_gt and word_count_le
-                    if (filterKey === 'word_count_gt' || filterKey === 'word_count_le') {
+                    // redefine usableOptionValues for 'gt', 'ge', 'le'
+                    const filterMode = filterDic[filterKey].mode;
+                    if (['gt', 'ge', 'le'].includes(filterMode)) {
                         const optionValues = Object.keys(optionDic);
-                        const wordCounts = [...usableOptionValues];
-                        const wordCountMin = wordCounts[0];
-                        const wordCountMax = wordCounts[wordCounts.length - 1];
+                        const intStoryValues = [...usableOptionValues];
+                        const min = intStoryValues[0];
+                        const max = intStoryValues[intStoryValues.length - 1];
 
-                        if (filterKey === 'word_count_gt') {
-                            const gtMinValues = optionValues
-                                .filter(optionValue => throughFilter(wordCountMin, optionValue, filterKey));
-                            const gtMaxValues = optionValues
-                                .filter(optionValue => throughFilter(wordCountMax, optionValue, filterKey));
-                            // gtMinValues.length is always greater than 0 because option "0 <"
-                            usableOptionValues = optionValues
-                                .slice(gtMinValues.length - 1, gtMaxValues.length);
-                        } else if (filterKey === 'word_count_le') {
-                            const leFalseMinValues = optionValues
-                                .filter(optionValue => !throughFilter(wordCountMin, optionValue, filterKey));
-                            const leFalseMaxValues = optionValues
-                                .filter(optionValue => !throughFilter(wordCountMax, optionValue, filterKey));
-                            // leFalseMaxValues.length is always less than optionValues.length
-                            // because option "< ∞"
-                            usableOptionValues = optionValues
-                                .slice(leFalseMinValues.length, leFalseMaxValues.length + 1);
+                        if (filterMode === 'gt' || filterMode === 'ge') {
+                            const minValues = optionValues
+                                .filter(optionValue => throughFilter(min, optionValue, filterKey));
+                            const maxValues = optionValues
+                                .filter(optionValue => throughFilter(max, optionValue, filterKey));
+                            // minValues.length is always greater than 0 because option "0 <" or "0 ≤"
+                            usableOptionValues = optionValues.slice(minValues.length - 1, maxValues.length);
+                        } else if (filterMode === 'le') {
+                            const falseMinValues = optionValues
+                                .filter(optionValue => !throughFilter(min, optionValue, filterKey));
+                            const falseMaxValues = optionValues
+                                .filter(optionValue => !throughFilter(max, optionValue, filterKey));
+                            // falseMaxValues.length is always less than optionValues.length because option "< ∞"
+                            usableOptionValues = optionValues.slice(falseMinValues.length, falseMaxValues.length + 1);
                         }
                     }
 
@@ -462,20 +467,20 @@
             selectTag.appendChild(defaultOption);
 
             let optionValues = (() => {
-                if (filterKey !== 'word_count_gt' && filterKey !== 'word_count_le') {
+                if (filterKey === 'word_count_gt' || filterKey === 'word_count_le') {
+                    if (filterKey === 'word_count_gt') {
+                        return ['0'].concat(wordCountOptions).map(x => x + ' <');
+                    } else if (filterKey === 'word_count_le') {
+                        return wordCountOptions.concat(['∞']).map(x => '≤ ' + x);
+                    }
+                } else if (['reviews', 'favs', 'follows'].includes(filterKey)) {
+                    return kudoCountOptions.map(x => x + ' ≤');
+                } else {
                     return Object.keys(initialStoryDic)
                         .map(x => initialStoryDic[x][filterKey])
                         .reduce((p, x) => p.concat(x), [])
                         .filter((x, i, self) => self.indexOf(x) === i)
                         .sort();
-                } else {
-                    return (() => {
-                        if (filterKey === 'word_count_gt') {
-                            return ['0'].concat(wordCountOptions).map(x => x + ' <');
-                        } else if (filterKey === 'word_count_le') {
-                            return wordCountOptions.concat(['∞']).map(x => '≤ ' + x);
-                        }
-                    })();
                 }
             })();
 
@@ -484,30 +489,31 @@
                 optionValues = orderedOptions.filter(x => optionValues.includes(x));
             }
 
-            if (filterKey === 'word_count_gt' || filterKey === 'word_count_le') {
-                const wordCounts = (() => {
+            const filterMode = filterDic[filterKey].mode;
+            if (['gt', 'ge', 'le'].includes(filterMode)) {
+                const intStoryValues = (() => {
                     return Object.keys(initialStoryDic)
-                        .map(x => initialStoryDic[x].word_count_gt)
+                        .map(x => initialStoryDic[x][filterKey])
                         .filter((x, i, self) => self.indexOf(x) === i)
                         .sort((a, b) => a - b);
                 })();
-                const wordCountMin = wordCounts[0];
-                const wordCountMax = wordCounts[wordCounts.length - 1];
+                const min = intStoryValues[0];
+                const max = intStoryValues[intStoryValues.length - 1];
 
-                if (filterKey === 'word_count_gt') {
-                    const gtMinValues = optionValues
-                        .filter(optionValue => throughFilter(wordCountMin, optionValue, filterKey));
-                    const gtMaxValues = optionValues
-                        .filter(optionValue => throughFilter(wordCountMax, optionValue, filterKey));
-                    // gtMinValues.length is always greater than 0 because option "0 <"
-                    optionValues = optionValues.slice(gtMinValues.length - 1, gtMaxValues.length);
-                } else if (filterKey === 'word_count_le') {
-                    const leFalseMinValues = optionValues
-                        .filter(optionValue => !throughFilter(wordCountMin, optionValue, filterKey));
-                    const leFalseMaxValues = optionValues
-                        .filter(optionValue => !throughFilter(wordCountMax, optionValue, filterKey));
-                    // leFalseMaxValues.length is always less than optionValues.length because option "< ∞"
-                    optionValues = optionValues.slice(leFalseMinValues.length, leFalseMaxValues.length + 1);
+                if (filterMode === 'gt' || filterMode === 'ge') {
+                    const minValues = optionValues
+                        .filter(optionValue => throughFilter(min, optionValue, filterKey));
+                    const maxValues = optionValues
+                        .filter(optionValue => throughFilter(max, optionValue, filterKey));
+                    // minValues.length is always greater than 0 because option "0 <" or "0 ≤"
+                    optionValues = optionValues.slice(minValues.length - 1, maxValues.length);
+                } else if (filterMode === 'le') {
+                    const falseMinValues = optionValues
+                        .filter(optionValue => !throughFilter(min, optionValue, filterKey));
+                    const falseMaxValues = optionValues
+                        .filter(optionValue => !throughFilter(max, optionValue, filterKey));
+                    // falseMaxValues.length is always less than optionValues.length because option "< ∞"
+                    optionValues = optionValues.slice(falseMinValues.length, falseMaxValues.length + 1);
                 }
             }
 
@@ -555,16 +561,15 @@
                 const storyDic = makeStoryDic();
                 Object.keys(storyDic).forEach(x => changeStoryDisplay(storyDic[x]));
 
-                [...enabledSelectTags].forEach(selectTag => {
-                    selectTag.value = 'default';
+                enabledSelectTags.forEach(selectTag => {
+                    selectTag.classList.remove('fas-filter-menu_locked');
+                    selectTag.classList.remove('fas-filter-menu_selected');
+
                     const optionTags = selectTag.getElementsByTagName('option');
                     [...optionTags].forEach(option => {
                         option.removeAttribute('hidden');
                         option.classList.remove('fas-filter-menu-item_locked');
                     });
-
-                    selectTag.classList.remove('fas-filter-menu_locked');
-                    selectTag.classList.remove('fas-filter-menu_selected');
                 });
 
                 const badge = document.getElementById('l_' + tabId).firstElementChild;
