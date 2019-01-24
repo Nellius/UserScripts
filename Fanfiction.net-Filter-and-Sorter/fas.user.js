@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.8
+// @version      0.82
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -12,7 +12,8 @@
 (function () {
     'use strict';
 
-    // setting
+    // Setting
+    // To disable unnecessary filters, comment out corresponding properties in filterDic.
     const filterDic = {
         fandom: { text: 'Fandom', title: "Fandom filter", mode: 'contain' },
         crossover: { text: 'Crossover ?', title: "Crossover filter", mode: 'equal' },
@@ -24,19 +25,21 @@
         reviews: { text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge' },
         favs: { text: 'Favs', title: "Fav count greater than or equal filter", mode: 'ge' },
         follows: { text: 'Follows', title: "Follow count greater than or equal filter", mode: 'ge' },
-        date_updated: { text: 'Updated', title: "Updated date range filter", mode: 'range' },
-        date_published: { text: 'Published', title: "Published date range filter", mode: 'range' },
+        updated: { text: 'Updated', title: "Updated date range filter", mode: 'range' },
+        published: { text: 'Published', title: "Published date range filter", mode: 'range' },
         character_a: { text: 'Character A', title: "Character filter a", mode: 'contain' },
         character_b: { text: 'Character B', title: "Character filter b", mode: 'contain' },
         status: { text: 'Status', title: "Status filer", mode: 'equal' }
     };
 
-    // setting for filter options by number comparison
-    // format: \d+(K)?
+    // Options for word_count_gt and word_count_le filters.
+    // Format: [\d+(K)?] in ascending order
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K'];
-    // format: \d+(K)?
+    // Options for reviews, favs and follows filters.
+    // format: [\d+(K)?] in ascending order
     const kudoCountOptions = ['0', '10', '50', '100', '200', '400', '600', '800', '1K'];
-    // format: \d+ (hour|day|week|month|year)(s)?
+    // Options for updated and published filters.
+    // format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
     const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
 
     // css
@@ -173,8 +176,8 @@
             storyData.title = zList.dataset.title;
             storyData.fandom = zList.dataset.category;
             storyData.story_id = parseInt(zList.dataset.storyid);
-            storyData.date_published = parseInt(zList.dataset.datesubmit);
-            storyData.date_updated = parseInt(zList.dataset.dateupdate);
+            storyData.published = parseInt(zList.dataset.datesubmit);
+            storyData.updated = parseInt(zList.dataset.dateupdate);
             storyData.reviews = parseInt(zList.dataset.ratingtimes);
             storyData.chapters = parseInt(zList.dataset.chapters);
             storyData.word_count_gt = parseInt(zList.dataset.wordcount);
@@ -507,7 +510,7 @@
                             return wordCountOptions.concat(['∞']).map(x => '≤ ' + x);
                         } else if (['reviews', 'favs', 'follows'].includes(filterKey)) {
                             return kudoCountOptions.map(x => x + ' ≤');
-                        } else if (['date_published', 'date_updated'].includes(filterKey)) {
+                        } else if (['published', 'updated'].includes(filterKey)) {
                             return dateRangeOptions.concat(['∞']).map(x => 'With in ' + x);
                         }
                     })();
