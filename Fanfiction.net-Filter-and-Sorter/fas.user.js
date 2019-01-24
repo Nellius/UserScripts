@@ -14,23 +14,30 @@
 
     // setting
     const filterDic = {
-        fandom: { text: 'Fandom', title: 'Fandom filter', mode: 'contain' },
-        crossover: { text: 'Crossover ?', title: 'Crossover filter', mode: 'equal' },
-        rating: { text: 'Rating', title: 'Rating filter', mode: 'equal' },
-        language: { text: 'Language', title: 'Language filter', mode: 'equal' },
-        genre: { text: 'Genre', title: 'Genre filter', mode: 'contain' },
-        word_count_gt: { text: '< Words', title: 'Word count greater than filter', mode: 'gt' },
-        word_count_le: { text: 'Words ≤', title: 'Word count less or equal filter', mode: 'le' },
-        reviews: { text: 'Reviews', title: 'Review count greater than or equal filter', mode: 'ge' },
-        favs: { text: 'Favs', title: 'Fav count greater than or equal filter', mode: 'ge' },
-        follows: { text: 'Follows', title: 'Follow count greater than or equal filter', mode: 'ge' },
-        character_a: { text: 'Character A', title: 'Character filter a', mode: 'contain' },
-        character_b: { text: 'Character B', title: 'Character filter b', mode: 'contain' },
-        status: { text: 'Status', title: 'Status filer', mode: 'equal' }
+        fandom: { text: 'Fandom', title: "Fandom filter", mode: 'contain' },
+        crossover: { text: 'Crossover ?', title: "Crossover filter", mode: 'equal' },
+        rating: { text: 'Rating', title: "Rating filter", mode: 'equal' },
+        language: { text: 'Language', title: "Language filter", mode: 'equal' },
+        genre: { text: 'Genre', title: "Genre filter", mode: 'contain' },
+        word_count_gt: { text: '< Words', title: "Word count greater than filter", mode: 'gt' },
+        word_count_le: { text: 'Words ≤', title: "Word count less or equal filter", mode: 'le' },
+        reviews: { text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge' },
+        favs: { text: 'Favs', title: "Fav count greater than or equal filter", mode: 'ge' },
+        follows: { text: 'Follows', title: "Follow count greater than or equal filter", mode: 'ge' },
+        date_updated: { text: 'Updated', title: "Updated date range filter", mode: 'range' },
+        date_published: { text: 'Published', title: "Published date range filter", mode: 'range' },
+        character_a: { text: 'Character A', title: "Character filter a", mode: 'contain' },
+        character_b: { text: 'Character B', title: "Character filter b", mode: 'contain' },
+        status: { text: 'Status', title: "Status filer", mode: 'equal' }
     };
 
+    // setting for filter options by number comparison
+    // format: \d+(K)?
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K'];
+    // format: \d+(K)?
     const kudoCountOptions = ['0', '10', '50', '100', '200', '400', '600', '800', '1K'];
+    // format: \d+ (hour|day|week|month|year)(s)?
+    const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
 
     // css
     // eslint-disable-next-line no-undef
@@ -166,8 +173,8 @@
             storyData.title = zList.dataset.title;
             storyData.fandom = zList.dataset.category;
             storyData.story_id = parseInt(zList.dataset.storyid);
-            storyData.date_submit = parseInt(zList.dataset.datesubmit);
-            storyData.date_update = parseInt(zList.dataset.dateupdate);
+            storyData.date_published = parseInt(zList.dataset.datesubmit);
+            storyData.date_updated = parseInt(zList.dataset.dateupdate);
             storyData.reviews = parseInt(zList.dataset.ratingtimes);
             storyData.chapters = parseInt(zList.dataset.chapters);
             storyData.word_count_gt = parseInt(zList.dataset.wordcount);
@@ -227,6 +234,24 @@
             return storyData;
         };
 
+        const timeStrToInt = (timeStr) => {
+            const hour = 3600;
+            const day = hour * 24;
+            const week = hour * 24 * 7;
+            const month = week * 4;
+            const year = month * 12;
+
+            const matches = timeStr
+                .replace(/hour(s)?/, hour.toString())
+                .replace(/day(s)?/, day.toString())
+                .replace(/week(s)?/, week.toString())
+                .replace(/month(s)?/, month.toString())
+                .replace(/year(s)?/, year.toString())
+                .match(/\d+/g);
+
+            return matches ? parseInt(matches[0]) * parseInt(matches[1]) : null;
+        };
+
         const throughFilter = (storyValue, selectValue, filterKey) => {
             if (selectValue === 'default') {
                 return true;
@@ -236,6 +261,10 @@
                     return storyValue === selectValue;
                 } else if (filterMode === 'contain') {
                     return storyValue.includes(selectValue);
+                } else if (filterMode === 'range') {
+                    const now = Math.floor(Date.now() / 1000);
+                    const intRange = timeStrToInt(selectValue);
+                    return intRange === null || now - storyValue <= intRange;
                 } else if (['gt', 'ge', 'le'].includes) {
                     const execResult = /\d+/.exec(selectValue.replace(/K/, '000'));
                     const intSelectValue = execResult ? parseInt(execResult[0]) : null;
@@ -330,41 +359,34 @@
                 const optionDic = selectDic[filterKey].optionDic;
 
                 if (!selectDic[filterKey].disabled) {
-                    // define usableOptionValues
-                    let usableOptionValues = Object.keys(storyDic)
-                        .filter(x => {
-                            const filterStatus = { ...storyDic[x].filterStatus };
-                            filterStatus[filterKey] = true;
-                            return Object.keys(filterStatus).every(x => filterStatus[x]);
-                        }).map(x => storyDic[x][filterKey])
-                        .reduce((p, x) => p.concat(x), []) // flat()
-                        .filter((x, i, self) => self.indexOf(x) === i)
-                        .sort((a, b) => a - b);
+                    const usableOptionValues = (() => {
+                        const usableStoryValues = Object.keys(storyDic)
+                            .filter(x => {
+                                const filterStatus = { ...storyDic[x].filterStatus };
+                                filterStatus[filterKey] = true;
+                                return Object.keys(filterStatus).every(x => filterStatus[x]);
+                            }).map(x => storyDic[x][filterKey])
+                            .reduce((p, x) => p.concat(x), []) // flat()
+                            .filter((x, i, self) => self.indexOf(x) === i)
+                            .sort((a, b) => a - b);
 
-                    // redefine usableOptionValues for 'gt', 'ge', 'le'
-                    const filterMode = filterDic[filterKey].mode;
-                    if (['gt', 'ge', 'le'].includes(filterMode)) {
-                        const optionValues = Object.keys(optionDic);
-                        const intStoryValues = [...usableOptionValues];
-                        const min = intStoryValues[0];
-                        const max = intStoryValues[intStoryValues.length - 1];
-
-                        if (filterMode === 'gt' || filterMode === 'ge') {
-                            const minValues = optionValues
-                                .filter(optionValue => throughFilter(min, optionValue, filterKey));
-                            const maxValues = optionValues
-                                .filter(optionValue => throughFilter(max, optionValue, filterKey));
-                            // minValues.length is always greater than 0 because option "0 <" or "0 ≤"
-                            usableOptionValues = optionValues.slice(minValues.length - 1, maxValues.length);
-                        } else if (filterMode === 'le') {
-                            const falseMinValues = optionValues
-                                .filter(optionValue => !throughFilter(min, optionValue, filterKey));
-                            const falseMaxValues = optionValues
-                                .filter(optionValue => !throughFilter(max, optionValue, filterKey));
-                            // falseMaxValues.length is always less than optionValues.length because option "< ∞"
-                            usableOptionValues = optionValues.slice(falseMinValues.length, falseMaxValues.length + 1);
+                        const filterMode = filterDic[filterKey].mode;
+                        if (['gt', 'ge', 'le', 'range'].includes(filterMode)) {
+                            const sufficientOptionValues = usableStoryValues.map(storyValue => {
+                                const optionValues = Object.keys(optionDic);
+                                const throughOptionValues = optionValues
+                                    .filter(optionValue => throughFilter(storyValue, optionValue, filterKey));
+                                if (filterMode === 'gt' || filterMode === 'ge') {
+                                    return throughOptionValues[throughOptionValues.length - 1];
+                                } else if (filterMode === 'le' || filterMode === 'range') {
+                                    return throughOptionValues[0];
+                                }
+                            }).filter((x, i, self) => self.indexOf(x) === i);
+                            return sufficientOptionValues;
+                        } else {
+                            return usableStoryValues;
                         }
-                    }
+                    })();
 
                     // Add/remove hidden attribute to useless options by usableOptionValues
                     Object.keys(optionDic).forEach(optionValue => {
@@ -466,56 +488,45 @@
             defaultOption.classList.add('fas-filter-menu-item');
             selectTag.appendChild(defaultOption);
 
-            let optionValues = (() => {
-                if (filterKey === 'word_count_gt' || filterKey === 'word_count_le') {
-                    if (filterKey === 'word_count_gt') {
-                        return ['0'].concat(wordCountOptions).map(x => x + ' <');
-                    } else if (filterKey === 'word_count_le') {
-                        return wordCountOptions.concat(['∞']).map(x => '≤ ' + x);
-                    }
-                } else if (['reviews', 'favs', 'follows'].includes(filterKey)) {
-                    return kudoCountOptions.map(x => x + ' ≤');
+            const optionValues = (() => {
+                const storyValues = Object.keys(initialStoryDic)
+                    .map(x => initialStoryDic[x][filterKey])
+                    .reduce((p, x) => p.concat(x), [])
+                    .filter((x, i, self) => self.indexOf(x) === i)
+                    .sort();
+
+                const filterMode = filterDic[filterKey].mode;
+                if (filterKey === 'rating') {
+                    const orderedOptions = ['K', 'K+', 'T', 'M'];
+                    return orderedOptions.filter(x => storyValues.includes(x));
+                } else if (['gt', 'ge', 'le', 'range'].includes(filterMode)) {
+                    const allOptionValues = (() => {
+                        if (filterKey === 'word_count_gt') {
+                            return ['0'].concat(wordCountOptions).map(x => x + ' <');
+                        } else if (filterKey === 'word_count_le') {
+                            return wordCountOptions.concat(['∞']).map(x => '≤ ' + x);
+                        } else if (['reviews', 'favs', 'follows'].includes(filterKey)) {
+                            return kudoCountOptions.map(x => x + ' ≤');
+                        } else if (['date_published', 'date_updated'].includes(filterKey)) {
+                            return dateRangeOptions.concat(['∞']).map(x => 'With in ' + x);
+                        }
+                    })();
+
+                    const sufficientOptionValues = storyValues.map(storyValue => {
+                        const throughOptionValues = allOptionValues
+                            .filter(optionValue => throughFilter(storyValue, optionValue, filterKey));
+                        if (filterMode === 'gt' || filterMode === 'ge') {
+                            return throughOptionValues[throughOptionValues.length - 1];
+                        } else if (filterMode === 'le' || filterMode === 'range') {
+                            return throughOptionValues[0];
+                        }
+                    }).filter((x, i, self) => self.indexOf(x) === i);
+
+                    return allOptionValues.filter(x => sufficientOptionValues.includes(x));
                 } else {
-                    return Object.keys(initialStoryDic)
-                        .map(x => initialStoryDic[x][filterKey])
-                        .reduce((p, x) => p.concat(x), [])
-                        .filter((x, i, self) => self.indexOf(x) === i)
-                        .sort();
+                    return storyValues;
                 }
             })();
-
-            if (filterKey === 'rating') {
-                const orderedOptions = ['K', 'K+', 'T', 'M'];
-                optionValues = orderedOptions.filter(x => optionValues.includes(x));
-            }
-
-            const filterMode = filterDic[filterKey].mode;
-            if (['gt', 'ge', 'le'].includes(filterMode)) {
-                const intStoryValues = (() => {
-                    return Object.keys(initialStoryDic)
-                        .map(x => initialStoryDic[x][filterKey])
-                        .filter((x, i, self) => self.indexOf(x) === i)
-                        .sort((a, b) => a - b);
-                })();
-                const min = intStoryValues[0];
-                const max = intStoryValues[intStoryValues.length - 1];
-
-                if (filterMode === 'gt' || filterMode === 'ge') {
-                    const minValues = optionValues
-                        .filter(optionValue => throughFilter(min, optionValue, filterKey));
-                    const maxValues = optionValues
-                        .filter(optionValue => throughFilter(max, optionValue, filterKey));
-                    // minValues.length is always greater than 0 because option "0 <" or "0 ≤"
-                    optionValues = optionValues.slice(minValues.length - 1, maxValues.length);
-                } else if (filterMode === 'le') {
-                    const falseMinValues = optionValues
-                        .filter(optionValue => !throughFilter(min, optionValue, filterKey));
-                    const falseMaxValues = optionValues
-                        .filter(optionValue => !throughFilter(max, optionValue, filterKey));
-                    // falseMaxValues.length is always less than optionValues.length because option "< ∞"
-                    optionValues = optionValues.slice(falseMinValues.length, falseMaxValues.length + 1);
-                }
-            }
 
             optionValues.forEach(optionValue => {
                 const option = document.createElement('option');
