@@ -8,7 +8,7 @@ Add filters and additional sorters to author page of Fanfiction.net.
 
 ### Demo
 
-![demo](images/fas-demo.gif)
+![demo](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/images/fas-demo.gif)
 
 ### Filters by
 
@@ -42,7 +42,7 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
 
 ```javascript
     // Setting
-    // To disable unnecessary filters, comment out corresponding properties in filterDic.   
+    // To disable unnecessary filters, comment out corresponding properties in filterDic.
     const filterDic = {
         fandom: { text: 'Fandom', title: "Fandom filter", mode: 'contain' },
         crossover: { text: 'Crossover ?', title: "Crossover filter", mode: 'equal' },
@@ -64,7 +64,7 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
 
 ### Edit filter options
 
-You can edit options of word_count_gt, word_count_le, reviews, favs, follows and updated and published filters. For example, if you want to single out stories with greater than 200K word counts, add '200K' to wordCountOptions. 
+You can edit options of word_count_gt, word_count_le, reviews, favs, follows and updated and published filters. For example, if you want to single out stories with greater than 200K word counts, add '200K' to wordCountOptions.
 
 ```javascript
     // Options for word_count_gt and word_count_le filters.
@@ -80,4 +80,4 @@ You can edit options of word_count_gt, word_count_le, reviews, favs, follows and
 
 ## Compatible
 
-* [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) on [Chromium](https://www.chromium.org/Home) desktop browser.
+- [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) on [Chromium](https://www.chromium.org/Home) desktop browser.

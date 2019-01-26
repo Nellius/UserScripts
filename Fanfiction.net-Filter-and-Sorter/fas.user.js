@@ -105,15 +105,8 @@
         const tab = document.getElementById(tabId);
         const tabInside = document.getElementById(tabId + '_inside');
 
-        const continueFlag = (() => {
-            if (tabInside) {
-                if (tab.firstElementChild.tagName === 'DIV') {
-                    return false;
-                }
-            }
-            return true;
-        })();
-        if (continueFlag) {
+        const moreThanOneStories = tabInside && tab.firstElementChild.tagName === 'DIV';
+        if (!moreThanOneStories) {
             continue;
         }
 
