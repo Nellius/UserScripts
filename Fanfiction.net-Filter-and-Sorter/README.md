@@ -8,7 +8,7 @@ Add filters and additional sorters to author page of Fanfiction.net.
 
 ### Demo
 
-![demo](images/fas-demo.gif)
+![demo](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/images/fas-demo.gif)
 
 ### Filters by
 
@@ -26,6 +26,7 @@ Add filters and additional sorters to author page of Fanfiction.net.
 - Published
 - Character A
 - Character B
+- Relationship
 - Status
 
 ### Additional sorters
@@ -42,7 +43,7 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
 
 ```javascript
     // Setting
-    // To disable unnecessary filters, comment out corresponding properties in filterDic.   
+    // To disable unnecessary filters, comment out corresponding properties in filterDic.
     const filterDic = {
         fandom: { text: 'Fandom', title: "Fandom filter", mode: 'contain' },
         crossover: { text: 'Crossover ?', title: "Crossover filter", mode: 'equal' },
@@ -58,26 +59,34 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
         // published: { text: 'Published', title: "Published date range filter", mode: 'range' },
         character_a: { text: 'Character A', title: "Character filter a", mode: 'contain' },
         character_b: { text: 'Character B', title: "Character filter b", mode: 'contain' },
+        relationship: { text: 'Relationship', title: "Relationship filter", mode: 'contain' },
         status: { text: 'Status', title: "Status filer", mode: 'equal' }
     };
 ```
 
 ### Edit filter options
 
-You can edit options of word_count_gt, word_count_le, reviews, favs, follows and updated and published filters. For example, if you want to single out stories with greater than 200K word counts, add '200K' to wordCountOptions. 
+You can edit options of word_count_gt, word_count_le, reviews, favs, follows and updated and published filters. For example, if you want to single out stories with greater than 200K word counts, add '200K' to wordCountOptions.
 
 ```javascript
     // Options for word_count_gt and word_count_le filters.
     // Format: [\d+(K)?] in ascending order
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K', '200K'];
     // Options for reviews, favs and follows filters.
-    // format: [\d+(K)?] in ascending order
+    // Format: [\d+(K)?] in ascending order
     const kudoCountOptions = ['0', '10', '50', '100', '200', '400', '600', '800', '1K'];
     // Options for updated and published filters.
-    // format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
+    // Format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
     const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
+```
+
+### Sort characters of relationship
+
+```javascript
+    // Whether or not to sort characters of relationship in ascending order
+    const SORT_CHARACTERS_OF_RELATIONSHIP = true;
 ```
 
 ## Compatible
 
-* [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) on [Chromium](https://www.chromium.org/Home) desktop browser.
+- [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) on [Chromium](https://www.chromium.org/Home) desktop browser.
