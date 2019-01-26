@@ -73,10 +73,10 @@ You can edit options of word_count_gt, word_count_le, reviews, favs, follows and
     // Format: [\d+(K)?] in ascending order
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K', '200K'];
     // Options for reviews, favs and follows filters.
-    // format: [\d+(K)?] in ascending order
+    // Format: [\d+(K)?] in ascending order
     const kudoCountOptions = ['0', '10', '50', '100', '200', '400', '600', '800', '1K'];
     // Options for updated and published filters.
-    // format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
+    // Format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
     const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
 ```
 

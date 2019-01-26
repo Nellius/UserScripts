@@ -37,13 +37,13 @@
     // Format: [\d+(K)?] in ascending order
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K'];
     // Options for reviews, favs and follows filters.
-    // format: [\d+(K)?] in ascending order
+    // Format: [\d+(K)?] in ascending order
     const kudoCountOptions = ['0', '10', '50', '100', '200', '400', '600', '800', '1K'];
     // Options for updated and published filters.
-    // format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
+    // Format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
     const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
 
-    // Whether or not to sort characters of relationship in ascending order
+    // Whether or not to sort characters of relationship in ascending order.
     const SORT_CHARACTERS_OF_RELATIONSHIP = true;
 
     // css
@@ -58,6 +58,7 @@
         ".fas-filter-menu-item_locked {background-color: #ccc;}"
     ].join(''));
 
+    // Sorter funtions
     function sortByTitle (a, b) {
         const aTitle = a.dataset.title.toLowerCase();
         const bTitle = b.dataset.title.toLowerCase();
@@ -106,15 +107,17 @@
     }
 
     for (let tabId of ['st', 'fs']) {
+        // Initiation
         const tab = document.getElementById(tabId);
         const tabInside = document.getElementById(tabId + '_inside');
 
+        // Is there a need to add sorters and filters?
         const moreThanOneStories = tabInside && tabInside.getElementsByClassName('z-list').length >= 2;
         if (!moreThanOneStories) {
             continue;
         }
 
-        // sorter
+        // Add sorters
         const favSpan = document.createElement('span');
         favSpan.textContent = 'Favs';
         favSpan.className = 'gray';
@@ -159,6 +162,7 @@
             tabInside.appendChild(fragment);
         });
 
+        // Append sorters
         const fragment = document.createDocumentFragment();
         fragment.appendChild(document.createTextNode(' '));
         fragment.appendChild(favSpan);
@@ -167,7 +171,8 @@
         fragment.appendChild(document.createTextNode(' . '));
         tab.firstElementChild.appendChild(fragment);
 
-        // filter
+        // Filter functions
+        // Make story data from .zList tag.
         const makeStoryData = (zList) => {
             const storyData = {};
             storyData.title = zList.dataset.title;
@@ -181,6 +186,8 @@
             storyData.word_count_le = parseInt(zList.dataset.wordcount);
             storyData.status = parseInt(zList.dataset.statusid) === 1 ? 'In-Progress' : 'Complete';
 
+            // .zList.filter_placeholder tag doesn't have .z-padtop2 tag.
+            // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
             const zPadtop2Tags = zList.getElementsByClassName('z-padtop2');
             if (zPadtop2Tags.length) {
                 const dataText = zPadtop2Tags[0].textContent;
@@ -221,6 +228,7 @@
                     const bracketMatches = characterExec[1].match(/\[[^\]]+\]/g);
                     if (bracketMatches) {
                         for (let bracketMatch of bracketMatches) {
+                            // [foo, bar] => [bar, foo]
                             if (SORT_CHARACTERS_OF_RELATIONSHIP) {
                                 const sortedCharacters = bracketMatch
                                     .split(/\[|\]|, /)
@@ -229,6 +237,7 @@
                                     .sort()
                                     .join(', ');
                                 storyData.relationship.push('[' + sortedCharacters + ']');
+                            // [foo, bar] => [foo, bar]
                             } else {
                                 storyData.relationship.push(bracketMatch);
                             }
@@ -260,6 +269,7 @@
             return matches ? parseInt(matches[0]) * parseInt(matches[1]) : null;
         };
 
+        // Judge if a story with storyValue passes through filter with selectvalue.
         const throughFilter = (storyValue, selectValue, filterKey) => {
             if (selectValue === 'default') {
                 return true;
@@ -326,8 +336,11 @@
         };
 
         const changeStoryDisplay = (story) => {
+            // If a story passes through every filter
             story.displayFlag = Object.keys(story.filterStatus).every(x => story.filterStatus[x]);
 
+            // .filter_placeholder is added by
+            // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
             if (story.placeHolder) {
                 story.placeHolder.style.display = story.displayFlag ? '' : 'none';
             } else {
@@ -345,6 +358,7 @@
                 }).sort();
         };
 
+        // Collect all filter doms at once by making selectDic
         const makeSelectDic = () => {
             const selectDic = {};
             Object.keys(filterDic).forEach(filterKey => {
@@ -371,21 +385,26 @@
             return selectDic;
         };
 
+        // Apply selectKey filter with selectValue to all stories.
         const filterStories = (selectKey, selectValue) => {
             const storyDic = makeStoryDic();
+            // Change display of each story.
             Object.keys(storyDic).forEach(x => {
                 storyDic[x].filterStatus[selectKey] =
                     throughFilter(storyDic[x][selectKey], selectValue, selectKey);
                 changeStoryDisplay(storyDic[x]);
             });
 
-            // Hide useless options
+            // Hide useless options.
             const selectDic = makeSelectDic();
             Object.keys(filterDic).forEach(filterKey => {
                 const optionDic = selectDic[filterKey].optionDic;
 
                 if (selectDic[filterKey].accessible) {
+                    // By changing to one of usableOptionValues, display of stories would change.
+                    // Excluded options can't change display of stories.
                     const usableOptionValues = (() => {
+                        // Make usableStoryValues from alternately filtered stories by neutralizing each filter.
                         const usableStoryValues = Object.keys(storyDic)
                             .filter(x => {
                                 const filterStatus = { ...storyDic[x].filterStatus };
@@ -397,6 +416,8 @@
                             .sort((a, b) => a - b);
 
                         const filterMode = filterDic[filterKey].mode;
+                        // Filters with ['gt', 'ge', 'le', 'range'] mode can have redundant options.
+                        // Remove redundant options.
                         if (['gt', 'ge', 'le', 'range'].includes(filterMode)) {
                             const sufficientOptionValues = usableStoryValues.map(storyValue => {
                                 const optionValues = Object.keys(optionDic);
@@ -414,7 +435,7 @@
                         }
                     })();
 
-                    // Add/remove hidden attribute to useless options by usableOptionValues
+                    // Add/remove hidden attribute to options.
                     Object.keys(optionDic).forEach(optionValue => {
                         const usable = usableOptionValues.includes(optionValue);
                         optionDic[optionValue].usable = usable;
@@ -427,7 +448,7 @@
                 }
             });
 
-            // Hide same character
+            // Hide same character.
             const characterDicList = [
                 { c1: selectDic['character_a'], c2: selectDic['character_b'] },
                 { c1: selectDic['character_b'], c2: selectDic['character_a'] }
@@ -438,19 +459,19 @@
                 }
             });
 
-            // Add/remove .fas-filter-menu_locked and .fas-filter-menu-item_locked
+            // Add/remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
             Object.keys(filterDic)
                 .filter(filterKey => selectDic[filterKey].accessible)
                 .forEach(filterKey => {
                     const optionDic = selectDic[filterKey].optionDic;
 
-                    // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked
+                    // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
                     selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked');
                     selectDic[filterKey].defaultOption.dom.classList.remove('fas-filter-menu_locked');
                     Object.keys(optionDic)
                         .forEach(x => optionDic[x].dom.classList.remove('fas-filter-menu-item_locked'));
 
-                    // Add .fas-filter-menu_locked to default option
+                    // Add .fas-filter-menu_locked to default option when defaultStoryIds are equal to filteredStoryIds.
                     const filteredStoryIds = Object.keys(storyDic)
                         .filter(x => storyDic[x].displayFlag)
                         .sort();
@@ -461,8 +482,8 @@
                         selectDic[filterKey].defaultOption.dom.classList.add('fas-filter-menu_locked');
                     }
 
-                    // Add .fas-filter-menu-item_locked when alternatelyFilteredStoryIds are equal to filteredStoryIds
-                    // Add .fas-filter-menu_locked when every alternatelyFilteredStoryIds are equal to filteredStoryIds
+                    // Add .fas-filter-menu-item_locked when alternatelyFilteredStoryIds are equal to filteredStoryIds.
+                    // Add .fas-filter-menu_locked when every alternatelyFilteredStoryIds are equal to filteredStoryIds.
                     const otherOptionsLocked = Object.keys(optionDic)
                         .filter(optionValue => optionDic[optionValue].usable)
                         .filter(optionValue => !(filterKey === selectKey && optionValue === selectValue))
@@ -481,7 +502,7 @@
                     }
                 });
 
-            // Change badge's story number
+            // Change badge's story number.
             const badge = document.getElementById('l_' + tabId).firstElementChild;
             const displayedStoryNumber = [...Object.keys(storyDic).filter(x => storyDic[x].displayFlag)].length;
             badge.textContent = displayedStoryNumber;
@@ -489,12 +510,16 @@
             console.log(storyDic);
         };
 
+        // Add filters
         const filterDiv = document.createElement('div');
         filterDiv.classList.add('fas-filter-menus');
         filterDiv.appendChild(document.createTextNode('Filter: '));
 
+        // Make initialStoryDic from initial state of stories.
         const initialStoryDic = makeStoryDic();
         const initialStoryIds = Object.keys(initialStoryDic).sort();
+
+        // Log initial attributes and classList for clear feature.
         const initialLockedDic = {};
 
         const makeSelectTag = (filterKey, defaultText) => {
@@ -508,6 +533,8 @@
             defaultOption.classList.add('fas-filter-menu-item');
             selectTag.appendChild(defaultOption);
 
+            // Make optionValues from
+            // filterKey values of each story, wordCountOptions, kudoCountOptions or dateRangeOptions.
             const optionValues = (() => {
                 const storyValues = Object.keys(initialStoryDic)
                     .map(x => initialStoryDic[x][filterKey])
@@ -532,6 +559,8 @@
                         }
                     })();
 
+                    // Filters with ['gt', 'ge', 'le', 'range'] mode can have redundant options.
+                    // Remove redundant options.
                     const sufficientOptionValues = storyValues.map(storyValue => {
                         const throughOptionValues = allOptionValues
                             .filter(optionValue => throughFilter(storyValue, optionValue, filterKey));
@@ -542,6 +571,7 @@
                         }
                     }).filter((x, i, self) => self.indexOf(x) === i);
 
+                    // "return sufficientOptionValues;" would disturb order of options.
                     return allOptionValues.filter(x => sufficientOptionValues.includes(x));
                 } else {
                     return storyValues;
@@ -553,7 +583,7 @@
             initialLockedDic[filterKey].menuLocked = false;
             initialLockedDic[filterKey].itemLockedDic = {};
 
-            const optionInitialLocked = optionValues.map(optionValue => {
+            const initialOptionLocked = optionValues.map(optionValue => {
                 initialLockedDic[filterKey].itemLockedDic[optionValue] = false;
 
                 const option = document.createElement('option');
@@ -564,6 +594,8 @@
                 const alternatelyFilteredStoryIds =
                     makeAlternatelyFilteredStoryIds(initialStoryDic, optionValue, filterKey);
                 const idsEqualFlag = JSON.stringify(initialStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
+
+                // Add .fas-filter-menu-item_locked when alternatelyFilteredStoryIds are equal to initialStoryIds.
                 if (idsEqualFlag) {
                     initialLockedDic[filterKey].itemLockedDic[optionValue] = true;
                     option.classList.add('fas-filter-menu-item_locked');
@@ -573,32 +605,39 @@
                 return idsEqualFlag;
             }).every(x => x);
 
+            // When every alternatelyFilteredStoryIds are equal to initialStoryIds,
             const optionTags = selectTag.getElementsByTagName('option');
-            if (optionInitialLocked) {
+            if (initialOptionLocked) {
+                // if every story have no filter value, don't display filter.
                 if (optionTags.length === 1) {
                     selectTag.style.display = 'none';
+                // if every stories has same value, disable filter.
                 } else if (optionTags.length === 2) {
                     selectTag.value = optionTags[1].value;
                     initialLockedDic[filterKey].menuDisabled = true;
                     selectTag.setAttribute('disabled', '');
+                // else, add .fas-filter-menu_locked.
                 } else {
                     initialLockedDic[filterKey].menuLocked = true;
                     selectTag.classList.add('fas-filter-menu_locked');
                 }
             }
 
+            // Change display of stories by selected filter value.
             selectTag.addEventListener('change', (e) => {
                 filterStories(filterKey, selectTag.value);
             });
             return selectTag;
         };
 
+        // Add each filter
         Object.keys(filterDic).forEach(filterKey => {
             const filterTag = makeSelectTag(filterKey, filterDic[filterKey].text);
             filterDiv.appendChild(filterTag);
             filterDiv.appendChild(document.createTextNode(' '));
         });
 
+        // Clear filter settings and add attributes and class according to initialLockedDic.
         const clear = document.createElement('span');
         clear.textContent = 'Clear';
         clear.title = "Reset filter values to default";
@@ -610,6 +649,7 @@
                 .map(filterKey => selectDic[filterKey].value !== 'default')
                 .some(x => x);
 
+            // Is there a need to run clear feature?
             if (changed) {
                 Object.keys(selectDic)
                     .filter(filterKey => selectDic[filterKey].accessible)
@@ -633,15 +673,19 @@
                         });
                     });
 
+                // Change display of stories to initial state.
                 const storyDic = makeStoryDic();
                 Object.keys(storyDic).forEach(x => changeStoryDisplay(storyDic[x]));
 
+                // Change story number to initial state.
                 const badge = document.getElementById('l_' + tabId).firstElementChild;
                 badge.textContent = [...Object.keys(storyDic)].length;
             }
         });
-
+        // Add clear feature
         filterDiv.appendChild(clear);
+
+        // Append filters
         tab.insertBefore(filterDiv, tab.firstChild);
     }
 })();
