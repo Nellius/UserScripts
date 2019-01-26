@@ -26,6 +26,7 @@ Add filters and additional sorters to author page of Fanfiction.net.
 - Published
 - Character A
 - Character B
+- Relationship
 - Status
 
 ### Additional sorters
@@ -58,6 +59,7 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
         // published: { text: 'Published', title: "Published date range filter", mode: 'range' },
         character_a: { text: 'Character A', title: "Character filter a", mode: 'contain' },
         character_b: { text: 'Character B', title: "Character filter b", mode: 'contain' },
+        relationship: { text: 'Relationship', title: "Relationship filter", mode: 'contain' },
         status: { text: 'Status', title: "Status filer", mode: 'equal' }
     };
 ```
@@ -76,6 +78,13 @@ You can edit options of word_count_gt, word_count_le, reviews, favs, follows and
     // Options for updated and published filters.
     // format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
     const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
+```
+
+### Sort characters of relationship
+
+```javascript
+    // Whether or not to sort characters of relationship in ascending order
+    const SORT_CHARACTERS_OF_RELATIONSHIP = true;
 ```
 
 ## Compatible
