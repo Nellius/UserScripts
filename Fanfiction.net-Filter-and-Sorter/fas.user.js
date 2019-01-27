@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.85
+// @version      0.86
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -29,6 +29,7 @@
         published: { text: 'Published', title: "Published date range filter", mode: 'range' },
         character_a: { text: 'Character A', title: "Character filter a", mode: 'contain' },
         character_b: { text: 'Character B', title: "Character filter b", mode: 'contain' },
+        not_character: { text: 'Not Character', title: "Character filter b", mode: 'contain', reverse: true },
         relationship: { text: 'Relationship', title: "Relationship filter", mode: 'contain' },
         status: { text: 'Status', title: "Status filer", mode: 'equal' }
     };
@@ -222,6 +223,7 @@
 
                 storyData.character_a = [];
                 storyData.character_b = [];
+                storyData.not_character = [];
                 storyData.relationship = [];
                 const characterExec = /Published: [^-]+ - (.+)$/.exec(dataText.replace(/ - Complete$/, ''));
                 if (characterExec) {
@@ -246,6 +248,7 @@
                     storyData.character_a = characterExec[1]
                         .split(/\[|\]|, /).map(x => x.trim()).filter(x => x);
                     storyData.character_b = [...storyData.character_a];
+                    storyData.not_character = [...storyData.character_a];
                 }
             }
             return storyData;
@@ -275,25 +278,28 @@
                 return true;
             } else {
                 const filterMode = filterDic[filterKey].mode;
-                if (filterMode === 'equal') {
-                    return storyValue === selectValue;
-                } else if (filterMode === 'contain') {
-                    return storyValue.includes(selectValue);
-                } else if (filterMode === 'range') {
-                    const now = Math.floor(Date.now() / 1000);
-                    const intRange = timeStrToInt(selectValue);
-                    return intRange === null || now - storyValue <= intRange;
-                } else if (['gt', 'ge', 'le'].includes) {
-                    const execResult = /\d+/.exec(selectValue.replace(/K/, '000'));
-                    const intSelectValue = execResult ? parseInt(execResult[0]) : null;
-                    if (filterMode === 'gt') {
-                        return storyValue > intSelectValue;
-                    } else if (filterMode === 'ge') {
-                        return storyValue >= intSelectValue;
-                    } else if (filterMode === 'le') {
-                        return intSelectValue === null || storyValue <= intSelectValue;
+                const resultByFilterMode = (() => {
+                    if (filterMode === 'equal') {
+                        return storyValue === selectValue;
+                    } else if (filterMode === 'contain') {
+                        return storyValue.includes(selectValue);
+                    } else if (filterMode === 'range') {
+                        const now = Math.floor(Date.now() / 1000);
+                        const intRange = timeStrToInt(selectValue);
+                        return intRange === null || now - storyValue <= intRange;
+                    } else if (['gt', 'ge', 'le'].includes) {
+                        const execResult = /\d+/.exec(selectValue.replace(/K/, '000'));
+                        const intSelectValue = execResult ? parseInt(execResult[0]) : null;
+                        if (filterMode === 'gt') {
+                            return storyValue > intSelectValue;
+                        } else if (filterMode === 'ge') {
+                            return storyValue >= intSelectValue;
+                        } else if (filterMode === 'le') {
+                            return intSelectValue === null || storyValue <= intSelectValue;
+                        }
                     }
-                }
+                })();
+                return filterDic[filterKey].reverse ? !resultByFilterMode : resultByFilterMode;
             }
         };
 
@@ -401,57 +407,68 @@
                 const optionDic = selectDic[filterKey].optionDic;
 
                 if (selectDic[filterKey].accessible) {
-                    // By changing to one of usableOptionValues, display of stories would change.
-                    // Excluded options can't change display of stories.
-                    const usableOptionValues = (() => {
-                        // Make usableStoryValues from alternately filtered stories by neutralizing each filter.
-                        const usableStoryValues = Object.keys(storyDic)
-                            .filter(x => {
-                                const filterStatus = { ...storyDic[x].filterStatus };
-                                filterStatus[filterKey] = true;
-                                return Object.keys(filterStatus).every(x => filterStatus[x]);
-                            }).map(x => storyDic[x][filterKey])
-                            .reduce((p, x) => p.concat(x), [])
-                            .filter((x, i, self) => self.indexOf(x) === i)
-                            .sort((a, b) => a - b);
+                    // When in reverse mode, display all options.
+                    if (filterDic[filterKey].reverse) {
+                        Object.keys(optionDic).forEach(optionValue => {
+                            optionDic[optionValue].usable = true;
+                        });
+                    // When in not reverse mode, hide useless options.
+                    } else {
+                        // By changing to one of usableOptionValues, display of stories would change.
+                        // Excluded options can't change display of stories.
+                        const usableOptionValues = (() => {
+                            // Make usableStoryValues from alternately filtered stories by neutralizing each filter.
+                            const usableStoryValues = Object.keys(storyDic)
+                                .filter(x => {
+                                    const filterStatus = { ...storyDic[x].filterStatus };
+                                    filterStatus[filterKey] = true;
+                                    return Object.keys(filterStatus).every(x => filterStatus[x]);
+                                }).map(x => storyDic[x][filterKey])
+                                .reduce((p, x) => p.concat(x), [])
+                                .filter((x, i, self) => self.indexOf(x) === i)
+                                .sort((a, b) => a - b);
 
-                        const filterMode = filterDic[filterKey].mode;
-                        // Filters with ['gt', 'ge', 'le', 'range'] mode can have redundant options.
-                        // Remove redundant options.
-                        if (['gt', 'ge', 'le', 'range'].includes(filterMode)) {
-                            const sufficientOptionValues = usableStoryValues.map(storyValue => {
-                                const optionValues = Object.keys(optionDic);
-                                const throughOptionValues = optionValues
-                                    .filter(optionValue => throughFilter(storyValue, optionValue, filterKey));
-                                if (filterMode === 'gt' || filterMode === 'ge') {
-                                    return throughOptionValues[throughOptionValues.length - 1];
-                                } else if (filterMode === 'le' || filterMode === 'range') {
-                                    return throughOptionValues[0];
-                                }
-                            }).filter((x, i, self) => self.indexOf(x) === i);
-                            return sufficientOptionValues;
-                        } else {
-                            return usableStoryValues;
-                        }
-                    })();
+                            const filterMode = filterDic[filterKey].mode;
+                            // Filters with ['gt', 'ge', 'le', 'range'] mode can have redundant options.
+                            // Remove redundant options.
+                            if (['gt', 'ge', 'le', 'range'].includes(filterMode)) {
+                                const sufficientOptionValues = usableStoryValues.map(storyValue => {
+                                    const optionValues = Object.keys(optionDic);
+                                    const throughOptionValues = optionValues
+                                        .filter(optionValue => throughFilter(storyValue, optionValue, filterKey));
+                                    if (filterMode === 'gt' || filterMode === 'ge') {
+                                        return throughOptionValues[throughOptionValues.length - 1];
+                                    } else if (filterMode === 'le' || filterMode === 'range') {
+                                        return throughOptionValues[0];
+                                    }
+                                }).filter((x, i, self) => self.indexOf(x) === i);
+                                return sufficientOptionValues;
+                            } else {
+                                return usableStoryValues;
+                            }
+                        })();
 
-                    // Add/remove hidden attribute to options.
-                    Object.keys(optionDic).forEach(optionValue => {
-                        const usable = usableOptionValues.includes(optionValue);
-                        optionDic[optionValue].usable = usable;
-                        if (!usable) {
-                            optionDic[optionValue].dom.setAttribute('hidden', '');
-                        } else {
-                            optionDic[optionValue].dom.removeAttribute('hidden');
-                        }
-                    });
+                        // Add/remove hidden attribute to options.
+                        Object.keys(optionDic).forEach(optionValue => {
+                            const usable = usableOptionValues.includes(optionValue);
+                            optionDic[optionValue].usable = usable;
+                            if (!usable) {
+                                optionDic[optionValue].dom.setAttribute('hidden', '');
+                            } else {
+                                optionDic[optionValue].dom.removeAttribute('hidden');
+                            }
+                        });
+                    }
                 }
             });
 
-            // Hide same character.
             const characterDicList = [
+                // Hide same characters at 'character_a' or 'character_b' filter
                 { c1: selectDic['character_a'], c2: selectDic['character_b'] },
-                { c1: selectDic['character_b'], c2: selectDic['character_a'] }
+                { c1: selectDic['character_b'], c2: selectDic['character_a'] },
+                // At 'not_character' filter, hide charcters selected by 'character_a' or 'character_b' filter
+                { c1: selectDic['not_character'], c2: selectDic['character_a'] },
+                { c1: selectDic['not_character'], c2: selectDic['character_b'] }
             ];
             characterDicList.forEach(dic => {
                 if (dic.c2.value !== 'default') {
