@@ -403,64 +403,56 @@
 
             // Hide useless options.
             const selectDic = makeSelectDic();
-            Object.keys(filterDic).forEach(filterKey => {
-                const optionDic = selectDic[filterKey].optionDic;
+            Object.keys(selectDic)
+                .filter(filterKey => selectDic[filterKey].accessible)
+                .forEach(filterKey => {
+                    const optionDic = selectDic[filterKey].optionDic;
 
-                if (selectDic[filterKey].accessible) {
-                    // When in reverse mode, display all options.
-                    if (filterDic[filterKey].reverse) {
-                        Object.keys(optionDic).forEach(optionValue => {
-                            optionDic[optionValue].usable = true;
-                        });
-                    // When in not reverse mode, hide useless options.
-                    } else {
-                        // By changing to one of usableOptionValues, display of stories would change.
-                        // Excluded options can't change display of stories.
-                        const usableOptionValues = (() => {
-                            // Make usableStoryValues from alternately filtered stories by neutralizing each filter.
-                            const usableStoryValues = Object.keys(storyDic)
-                                .filter(x => {
-                                    const filterStatus = { ...storyDic[x].filterStatus };
-                                    filterStatus[filterKey] = true;
-                                    return Object.keys(filterStatus).every(x => filterStatus[x]);
-                                }).map(x => storyDic[x][filterKey])
-                                .reduce((p, x) => p.concat(x), [])
-                                .filter((x, i, self) => self.indexOf(x) === i)
-                                .sort((a, b) => a - b);
+                    // By changing to one of usableOptionValues, display of stories would change.
+                    // Excluded options can't change display of stories.
+                    const usableOptionValues = (() => {
+                        // Make usableStoryValues from alternately filtered stories by neutralizing each filter.
+                        const usableStoryValues = Object.keys(storyDic)
+                            .filter(x => {
+                                const filterStatus = { ...storyDic[x].filterStatus };
+                                filterStatus[filterKey] = true;
+                                return Object.keys(filterStatus).every(x => filterStatus[x]);
+                            }).map(x => storyDic[x][filterKey])
+                            .reduce((p, x) => p.concat(x), [])
+                            .filter((x, i, self) => self.indexOf(x) === i)
+                            .sort((a, b) => a - b);
 
-                            const filterMode = filterDic[filterKey].mode;
-                            // Filters with ['gt', 'ge', 'le', 'range'] mode can have redundant options.
-                            // Remove redundant options.
-                            if (['gt', 'ge', 'le', 'range'].includes(filterMode)) {
-                                const sufficientOptionValues = usableStoryValues.map(storyValue => {
-                                    const optionValues = Object.keys(optionDic);
-                                    const throughOptionValues = optionValues
-                                        .filter(optionValue => throughFilter(storyValue, optionValue, filterKey));
-                                    if (filterMode === 'gt' || filterMode === 'ge') {
-                                        return throughOptionValues[throughOptionValues.length - 1];
-                                    } else if (filterMode === 'le' || filterMode === 'range') {
-                                        return throughOptionValues[0];
-                                    }
-                                }).filter((x, i, self) => self.indexOf(x) === i);
-                                return sufficientOptionValues;
-                            } else {
-                                return usableStoryValues;
-                            }
-                        })();
+                        const filterMode = filterDic[filterKey].mode;
+                        // Filters with ['gt', 'ge', 'le', 'range'] mode can have redundant options.
+                        // Remove redundant options.
+                        if (['gt', 'ge', 'le', 'range'].includes(filterMode)) {
+                            const sufficientOptionValues = usableStoryValues.map(storyValue => {
+                                const optionValues = Object.keys(optionDic);
+                                const throughOptionValues = optionValues
+                                    .filter(optionValue => throughFilter(storyValue, optionValue, filterKey));
+                                if (filterMode === 'gt' || filterMode === 'ge') {
+                                    return throughOptionValues[throughOptionValues.length - 1];
+                                } else if (filterMode === 'le' || filterMode === 'range') {
+                                    return throughOptionValues[0];
+                                }
+                            }).filter((x, i, self) => self.indexOf(x) === i);
+                            return sufficientOptionValues;
+                        } else {
+                            return usableStoryValues;
+                        }
+                    })();
 
-                        // Add/remove hidden attribute to options.
-                        Object.keys(optionDic).forEach(optionValue => {
-                            const usable = usableOptionValues.includes(optionValue);
-                            optionDic[optionValue].usable = usable;
-                            if (!usable) {
-                                optionDic[optionValue].dom.setAttribute('hidden', '');
-                            } else {
-                                optionDic[optionValue].dom.removeAttribute('hidden');
-                            }
-                        });
-                    }
-                }
-            });
+                    // Add/remove hidden attribute to options.
+                    Object.keys(optionDic).forEach(optionValue => {
+                        const usable = usableOptionValues.includes(optionValue);
+                        optionDic[optionValue].usable = usable;
+                        if (!usable) {
+                            optionDic[optionValue].dom.setAttribute('hidden', '');
+                        } else {
+                            optionDic[optionValue].dom.removeAttribute('hidden');
+                        }
+                    });
+                });
 
             const characterDicList = [
                 // Hide same characters at 'character_a' or 'character_b' filter
@@ -477,7 +469,7 @@
             });
 
             // Add/remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
-            Object.keys(filterDic)
+            Object.keys(selectDic)
                 .filter(filterKey => selectDic[filterKey].accessible)
                 .forEach(filterKey => {
                     const optionDic = selectDic[filterKey].optionDic;
