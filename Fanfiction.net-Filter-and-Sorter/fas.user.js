@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.85
+// @version      0.87
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -13,35 +13,44 @@
     'use strict';
 
     // Setting
-    // To disable unnecessary filters, comment out corresponding properties in filterDic.
-    const filterDic = {
-        fandom: { text: 'Fandom', title: "Fandom filter", mode: 'contain' },
-        crossover: { text: 'Crossover ?', title: "Crossover filter", mode: 'equal' },
-        rating: { text: 'Rating', title: "Rating filter", mode: 'equal' },
-        language: { text: 'Language', title: "Language filter", mode: 'equal' },
-        genre: { text: 'Genre', title: "Genre filter", mode: 'contain' },
-        word_count_gt: { text: '< Words', title: "Word count greater than filter", mode: 'gt' },
-        word_count_le: { text: 'Words ≤', title: "Word count less or equal filter", mode: 'le' },
-        reviews: { text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge' },
-        favs: { text: 'Favs', title: "Fav count greater than or equal filter", mode: 'ge' },
-        follows: { text: 'Follows', title: "Follow count greater than or equal filter", mode: 'ge' },
-        updated: { text: 'Updated', title: "Updated date range filter", mode: 'range' },
-        published: { text: 'Published', title: "Published date range filter", mode: 'range' },
-        character_a: { text: 'Character A', title: "Character filter a", mode: 'contain' },
-        character_b: { text: 'Character B', title: "Character filter b", mode: 'contain' },
-        relationship: { text: 'Relationship', title: "Relationship filter", mode: 'contain' },
-        status: { text: 'Status', title: "Status filer", mode: 'equal' }
-    };
 
+    // Options for 'gt', 'ge', 'le', 'dateRange' mode.
     // Options for word_count_gt and word_count_le filters.
     // Format: [\d+(K)?] in ascending order
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K'];
     // Options for reviews, favs and follows filters.
     // Format: [\d+(K)?] in ascending order
-    const kudoCountOptions = ['0', '10', '50', '100', '200', '400', '600', '800', '1K'];
+    const kudoCountOptions = ['10', '50', '100', '200', '400', '600', '800', '1K'];
     // Options for updated and published filters.
     // Format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
     const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
+
+    // Filters
+    // dataId: property key of storyData defined in makeStoryData()
+    // text: text for filter select dom
+    // title: title for filter select dom
+    // mode: used to determine how to compare selectValue and storyValue in throughFilter()
+    // options: when mode is 'gt', 'ge', 'le', 'dateRange', you have to specify.
+    // reverse: reverse result of throughFilter()
+    const filterDic = {
+        fandom: { dataId: 'fandom', text: 'Fandom', title: "Fandom filter", mode: 'contain' },
+        crossover: { dataId: 'crossover', text: 'Crossover ?', title: "Crossover filter", mode: 'equal' },
+        rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
+        language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
+        genre: { dataId: 'genre', text: 'Genre', title: "Genre filter", mode: 'contain' },
+        word_count_gt: { dataId: 'word_count_gt', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
+        word_count_le: { dataId: 'word_count_le', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
+        reviews: { dataId: 'reviews', text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
+        favs: { dataId: 'favs', text: 'Favs', title: "Fav count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
+        follows: { dataId: 'follows', text: 'Follows', title: "Follow count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
+        updated: { dataId: 'updated', text: 'Updated', title: "Updated date range filter", mode: 'dateRange', options: dateRangeOptions },
+        published: { dataId: 'published', text: 'Published', title: "Published date range filter", mode: 'dateRange', options: dateRangeOptions },
+        character_a: { dataId: 'character', text: 'Character A', title: "Character filter a", mode: 'contain' },
+        character_b: { dataId: 'character', text: 'Character B', title: "Character filter b", mode: 'contain' },
+        not_character: { dataId: 'character', text: 'Not Character', title: "Character filter b", mode: 'contain', reverse: true },
+        relationship: { dataId: 'relationship', text: 'Relationship', title: "Relationship filter", mode: 'contain' },
+        status: { dataId: 'status', text: 'Status', title: "Status filer", mode: 'equal' }
+    };
 
     // Whether or not to sort characters of relationship in ascending order.
     const SORT_CHARACTERS_OF_RELATIONSHIP = true;
@@ -104,6 +113,34 @@
         } else {
             return sortByTitle(a, b);
         }
+    }
+
+    // Main
+    // Check standard of filterDic
+    const defaultFilterDataKeys = ['dataId', 'text', 'title', 'mode', 'options', 'reverse'];
+    const modesRequireOptions = ['gt', 'ge', 'le', 'dateRange'];
+    const filterDicUpToStandard = Object.keys(filterDic)
+        .map(filterKey => {
+            const filterData = filterDic[filterKey];
+            const everyKeyUpToStandard = Object.keys(filterData)
+                .map(filterDataKey => {
+                    const keyUpToStandard = defaultFilterDataKeys.includes(filterDataKey);
+                    if (!keyUpToStandard) {
+                        console.log(`${filterKey} filter: '${filterDataKey}' is an irregular key.`);
+                    }
+                    return keyUpToStandard;
+                }).every(x => x);
+
+            const modeRequirementUpTostandard =
+                modesRequireOptions.includes(filterData.mode) ? 'options' in filterData : true;
+            if (!modeRequirementUpTostandard) {
+                console.log(`${filterKey} filter: '${filterData.mode}' mode filter requires to specify options.`);
+            }
+            return everyKeyUpToStandard && modeRequirementUpTostandard;
+        }).every(x => x);
+    if (!filterDicUpToStandard) {
+        console.log("filterDic isn't up to standard.");
+        return;
     }
 
     for (let tabId of ['st', 'fs']) {
@@ -220,8 +257,7 @@
                 const followExec = / - Follows: ([\d,]+) - .+$/.exec(dataText);
                 storyData.follows = followExec ? parseInt(followExec[1].replace(/,/g, '')) : 0;
 
-                storyData.character_a = [];
-                storyData.character_b = [];
+                storyData.character = [];
                 storyData.relationship = [];
                 const characterExec = /Published: [^-]+ - (.+)$/.exec(dataText.replace(/ - Complete$/, ''));
                 if (characterExec) {
@@ -243,9 +279,8 @@
                             }
                         }
                     }
-                    storyData.character_a = characterExec[1]
+                    storyData.character = characterExec[1]
                         .split(/\[|\]|, /).map(x => x.trim()).filter(x => x);
-                    storyData.character_b = [...storyData.character_a];
                 }
             }
             return storyData;
@@ -275,25 +310,28 @@
                 return true;
             } else {
                 const filterMode = filterDic[filterKey].mode;
-                if (filterMode === 'equal') {
-                    return storyValue === selectValue;
-                } else if (filterMode === 'contain') {
-                    return storyValue.includes(selectValue);
-                } else if (filterMode === 'range') {
-                    const now = Math.floor(Date.now() / 1000);
-                    const intRange = timeStrToInt(selectValue);
-                    return intRange === null || now - storyValue <= intRange;
-                } else if (['gt', 'ge', 'le'].includes) {
-                    const execResult = /\d+/.exec(selectValue.replace(/K/, '000'));
-                    const intSelectValue = execResult ? parseInt(execResult[0]) : null;
-                    if (filterMode === 'gt') {
-                        return storyValue > intSelectValue;
-                    } else if (filterMode === 'ge') {
-                        return storyValue >= intSelectValue;
-                    } else if (filterMode === 'le') {
-                        return intSelectValue === null || storyValue <= intSelectValue;
+                const resultByFilterMode = (() => {
+                    if (filterMode === 'equal') {
+                        return storyValue === selectValue;
+                    } else if (filterMode === 'contain') {
+                        return storyValue.includes(selectValue);
+                    } else if (filterMode === 'dateRange') {
+                        const now = Math.floor(Date.now() / 1000);
+                        const intRange = timeStrToInt(selectValue);
+                        return intRange === null || now - storyValue <= intRange;
+                    } else if (['gt', 'ge', 'le'].includes) {
+                        const execResult = /\d+/.exec(selectValue.replace(/K/, '000'));
+                        const intSelectValue = execResult ? parseInt(execResult[0]) : null;
+                        if (filterMode === 'gt') {
+                            return storyValue > intSelectValue;
+                        } else if (filterMode === 'ge') {
+                            return storyValue >= intSelectValue;
+                        } else if (filterMode === 'le') {
+                            return intSelectValue === null || storyValue <= intSelectValue;
+                        }
                     }
-                }
+                })();
+                return filterDic[filterKey].reverse ? !resultByFilterMode : resultByFilterMode;
             }
         };
 
@@ -318,7 +356,10 @@
                     storyDic[id].placeHolder = x;
                 } else {
                     storyDic[id].dom = x;
-                    Object.assign(storyDic[id], storyData);
+                    Object.keys(filterDic).forEach(filterKey => {
+                        const dataId = filterDic[filterKey].dataId;
+                        storyDic[id][filterKey] = storyData[dataId];
+                    });
 
                     storyDic[id].filterStatus = {};
                     Object.keys(selectFilterDic).forEach(filterKey => {
@@ -397,10 +438,11 @@
 
             // Hide useless options.
             const selectDic = makeSelectDic();
-            Object.keys(filterDic).forEach(filterKey => {
-                const optionDic = selectDic[filterKey].optionDic;
+            Object.keys(selectDic)
+                .filter(filterKey => selectDic[filterKey].accessible)
+                .forEach(filterKey => {
+                    const optionDic = selectDic[filterKey].optionDic;
 
-                if (selectDic[filterKey].accessible) {
                     // By changing to one of usableOptionValues, display of stories would change.
                     // Excluded options can't change display of stories.
                     const usableOptionValues = (() => {
@@ -416,16 +458,20 @@
                             .sort((a, b) => a - b);
 
                         const filterMode = filterDic[filterKey].mode;
-                        // Filters with ['gt', 'ge', 'le', 'range'] mode can have redundant options.
+                        // Filters with ['gt', 'ge', 'le', 'dateRange'] mode can have redundant options.
                         // Remove redundant options.
-                        if (['gt', 'ge', 'le', 'range'].includes(filterMode)) {
+                        if (['gt', 'ge', 'le', 'dateRange'].includes(filterMode)) {
+                            const reverse = (filterDic[filterKey].reverse);
                             const sufficientOptionValues = usableStoryValues.map(storyValue => {
                                 const optionValues = Object.keys(optionDic);
                                 const throughOptionValues = optionValues
-                                    .filter(optionValue => throughFilter(storyValue, optionValue, filterKey));
+                                    .filter(optionValue => {
+                                        const result = throughFilter(storyValue, optionValue, filterKey);
+                                        return reverse ? !result : result;
+                                    });
                                 if (filterMode === 'gt' || filterMode === 'ge') {
                                     return throughOptionValues[throughOptionValues.length - 1];
-                                } else if (filterMode === 'le' || filterMode === 'range') {
+                                } else if (filterMode === 'le' || filterMode === 'dateRange') {
                                     return throughOptionValues[0];
                                 }
                             }).filter((x, i, self) => self.indexOf(x) === i);
@@ -445,22 +491,31 @@
                             optionDic[optionValue].dom.removeAttribute('hidden');
                         }
                     });
-                }
-            });
+                });
 
-            // Hide same character.
-            const characterDicList = [
-                { c1: selectDic['character_a'], c2: selectDic['character_b'] },
-                { c1: selectDic['character_b'], c2: selectDic['character_a'] }
-            ];
-            characterDicList.forEach(dic => {
-                if (dic.c2.value !== 'default') {
-                    dic.c1.optionDic[dic.c2.value].dom.setAttribute('hidden', '');
-                }
-            });
+            // Hide same value when filterKey uses same dataId.
+            Object.keys(filterDic)
+                .filter(filterKey => selectDic[filterKey].accessible)
+                .forEach(filterKey => {
+                    const filterKeysBySameDataId = Object.keys(filterDic)
+                        .filter(x => selectDic[x].accessible)
+                        .filter(x => x !== filterKey)
+                        .filter(x => filterDic[x].dataId === filterDic[filterKey].dataId);
+
+                    if (filterKeysBySameDataId.length) {
+                        filterKeysBySameDataId
+                            .filter(x => !filterDic[x].reverse)
+                            .filter(x => selectDic[x].value !== 'default')
+                            .forEach(x => {
+                                const sameValue = selectDic[x].value;
+                                selectDic[filterKey].optionDic[sameValue].dom.setAttribute('hidden', '');
+                                selectDic[filterKey].optionDic[sameValue].usable = false;
+                            });
+                    }
+                });
 
             // Add/remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
-            Object.keys(filterDic)
+            Object.keys(selectDic)
                 .filter(filterKey => selectDic[filterKey].accessible)
                 .forEach(filterKey => {
                     const optionDic = selectDic[filterKey].optionDic;
@@ -471,7 +526,7 @@
                     Object.keys(optionDic)
                         .forEach(x => optionDic[x].dom.classList.remove('fas-filter-menu-item_locked'));
 
-                    // Add .fas-filter-menu_locked to default option when defaultStoryIds are equal to filteredStoryIds.
+                    // Add .fas-filter-menu-item_locked to default option when defaultStoryIds are equal to filteredStoryIds.
                     const filteredStoryIds = Object.keys(storyDic)
                         .filter(x => storyDic[x].displayFlag)
                         .sort();
@@ -479,11 +534,12 @@
                     const defaultOptionLocked = JSON.stringify(filteredStoryIds) === JSON.stringify(defaultStoryIds);
 
                     if (defaultOptionLocked) {
-                        selectDic[filterKey].defaultOption.dom.classList.add('fas-filter-menu_locked');
+                        selectDic[filterKey].defaultOption.dom.classList.add('fas-filter-menu-item_locked');
                     }
 
-                    // Add .fas-filter-menu-item_locked when alternatelyFilteredStoryIds are equal to filteredStoryIds.
-                    // Add .fas-filter-menu_locked when every alternatelyFilteredStoryIds are equal to filteredStoryIds.
+                    // Add .fas-filter-menu_locked
+                    // when every alternatelyFilteredStoryIds are equal to filteredStoryIds,
+                    // or there are no usable options.
                     const otherOptionsLocked = Object.keys(optionDic)
                         .filter(optionValue => optionDic[optionValue].usable)
                         .filter(optionValue => !(filterKey === selectKey && optionValue === selectValue))
@@ -494,8 +550,9 @@
                                 optionDic[optionValue].dom.classList.add('fas-filter-menu-item_locked');
                             }
                             return idsEqualFlag;
-                        }).every(x => x);
+                        }).every(x => x); // [].every(x => x) === true, [].some(x => x) === false
 
+                    // Add .fas-filter-menu-item_locked
                     const optionsLocked = defaultOptionLocked && otherOptionsLocked;
                     if (optionsLocked) {
                         selectDic[filterKey].dom.classList.add('fas-filter-menu_locked');
@@ -546,27 +603,31 @@
                 if (filterKey === 'rating') {
                     const orderedOptions = ['K', 'K+', 'T', 'M'];
                     return orderedOptions.filter(x => storyValues.includes(x));
-                } else if (['gt', 'ge', 'le', 'range'].includes(filterMode)) {
+                } else if (['gt', 'ge', 'le', 'dateRange'].includes(filterMode)) {
                     const allOptionValues = (() => {
-                        if (filterKey === 'word_count_gt') {
-                            return ['0'].concat(wordCountOptions).map(x => x + ' <');
-                        } else if (filterKey === 'word_count_le') {
-                            return wordCountOptions.concat(['∞']).map(x => '≤ ' + x);
-                        } else if (['reviews', 'favs', 'follows'].includes(filterKey)) {
-                            return kudoCountOptions.map(x => x + ' ≤');
-                        } else if (['published', 'updated'].includes(filterKey)) {
-                            return dateRangeOptions.concat(['∞']).map(x => 'With in ' + x);
+                        if (filterMode === 'gt') {
+                            return ['0'].concat(filterDic[filterKey].options).map(x => x + ' <');
+                        } else if (filterMode === 'ge') {
+                            return ['0'].concat(filterDic[filterKey].options).map(x => x + ' ≤');
+                        } else if (filterMode === 'le') {
+                            return filterDic[filterKey].options.concat(['∞']).map(x => '≤ ' + x);
+                        } else if (filterMode === 'dateRange') {
+                            return filterDic[filterKey].options.concat(['∞']).map(x => 'With in ' + x);
                         }
                     })();
 
-                    // Filters with ['gt', 'ge', 'le', 'range'] mode can have redundant options.
+                    // Filters with ['gt', 'ge', 'le', 'dateRange'] mode can have redundant options.
                     // Remove redundant options.
+                    const reverse = (filterDic[filterKey].reverse);
                     const sufficientOptionValues = storyValues.map(storyValue => {
                         const throughOptionValues = allOptionValues
-                            .filter(optionValue => throughFilter(storyValue, optionValue, filterKey));
+                            .filter(optionValue => {
+                                const result = throughFilter(storyValue, optionValue, filterKey);
+                                return reverse ? !result : result;
+                            });
                         if (filterMode === 'gt' || filterMode === 'ge') {
                             return throughOptionValues[throughOptionValues.length - 1];
-                        } else if (filterMode === 'le' || filterMode === 'range') {
+                        } else if (filterMode === 'le' || filterMode === 'dateRange') {
                             return throughOptionValues[0];
                         }
                     }).filter((x, i, self) => self.indexOf(x) === i);
@@ -630,12 +691,26 @@
             return selectTag;
         };
 
-        // Add each filter
+        // Add filters
         Object.keys(filterDic).forEach(filterKey => {
             const filterTag = makeSelectTag(filterKey, filterDic[filterKey].text);
             filterDiv.appendChild(filterTag);
             filterDiv.appendChild(document.createTextNode(' '));
         });
+
+        // Don't display filter when other filter which uses same dataId is disabled.
+        Object.keys(filterDic)
+            .forEach(filterKey => {
+                const filterDisabled = Object.keys(filterDic)
+                    .filter(x => x !== filterKey)
+                    .filter(x => filterDic[x].dataId === filterDic[filterKey].dataId)
+                    .filter(x => initialLockedDic[x].menuDisabled);
+
+                if (filterDisabled.length) {
+                    const selectTag = filterDiv.querySelector('#' + tabId + '_' + filterKey + '_select');
+                    selectTag.style.display = 'none';
+                }
+            });
 
         // Clear filter settings and add attributes and class according to initialLockedDic.
         const clear = document.createElement('span');
