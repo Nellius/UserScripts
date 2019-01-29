@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.87
+// @version      0.9
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -12,8 +12,7 @@
 (function () {
     'use strict';
 
-    // Setting
-
+    // Filter Setting
     // Options for 'gt', 'ge', 'le', 'dateRange' mode.
     // Options for word_count_gt and word_count_le filters.
     // Format: [\d+(K)?] in ascending order
@@ -25,7 +24,6 @@
     // Format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
     const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
 
-    // Filters
     // dataId: property key of storyData defined in makeStoryData()
     // text: text for filter select dom
     // title: title for filter select dom
@@ -38,8 +36,8 @@
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre: { dataId: 'genre', text: 'Genre', title: "Genre filter", mode: 'contain' },
-        word_count_gt: { dataId: 'word_count_gt', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
-        word_count_le: { dataId: 'word_count_le', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
+        word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
+        word_count_le: { dataId: 'word_count', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
         reviews: { dataId: 'reviews', text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
         favs: { dataId: 'favs', text: 'Favs', title: "Fav count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
         follows: { dataId: 'follows', text: 'Follows', title: "Follow count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
@@ -55,65 +53,39 @@
     // Whether or not to sort characters of relationship in ascending order.
     const SORT_CHARACTERS_OF_RELATIONSHIP = true;
 
+    // Sorter Setting
+    // dataId: property key of storyData defined in makeStoryData()
+    // text: displayed sorter name
+    // order: 'asc' or 'dsc'
+    const sorterDicList = [
+        { dataId: 'fandom', text: 'Category', order: 'asc' },
+        { dataId: 'updated', text: 'Updated', order: 'dsc' },
+        { dataId: 'published', text: 'Published', order: 'dsc' },
+        { dataId: 'title', text: 'Title', order: 'asc' },
+        { dataId: 'word_count', text: 'Words', order: 'dsc' },
+        { dataId: 'chapters', text: 'Chapters', order: 'dsc' },
+        { dataId: 'reviews', text: 'Reviews', order: 'dsc' },
+        { dataId: 'favs', text: 'Favs', order: 'dsc' },
+        { dataId: 'follows', text: 'Follows', order: 'dsc' },
+        { dataId: 'status', text: 'Status', order: 'asc' }
+    ];
+
+    // Specify symbols to represent 'asc' and 'dsc'.
+    const orderSymbol = { asc: '▲', dsc: '▼' };
+
     // css
     // eslint-disable-next-line no-undef
     GM_addStyle([
-        ".fas-filter-menus {color: gray; font-size: .9em;}",
-        ".fas-filter-menu {font-size: 1em; padding: 1px 1px; height: 23px; margin: .1em auto;}",
-        ".fas-filter-menu_locked {background-color: #ccc;}",
-        ".fas-filter-menu:disabled {border: #999; background-color: #999;}",
-        ".fas-filter-menu-item {color: #555;}",
-        ".fas-filter-menu-item:checked {background-color: #ccc;}",
-        ".fas-filter-menu-item_locked {background-color: #ccc;}"
+        ".fas-sorter { color: gray; }",
+        ".fas-sorter:after { content: attr(data-order); }",
+        ".fas-filter-menus { color: gray; font-size: .9em; }",
+        ".fas-filter-menu { font-size: 1em; padding: 1px 1px; height: 23px; margin: .1em auto; }",
+        ".fas-filter-menu_locked { background-color: #ccc; }",
+        ".fas-filter-menu:disabled { border: #999; background-color: #999; }",
+        ".fas-filter-menu-item { color: #555; }",
+        ".fas-filter-menu-item:checked { background-color: #ccc; }",
+        ".fas-filter-menu-item_locked { background-color: #ccc; }"
     ].join(''));
-
-    // Sorter funtions
-    function sortByTitle (a, b) {
-        const aTitle = a.dataset.title.toLowerCase();
-        const bTitle = b.dataset.title.toLowerCase();
-
-        if (aTitle > bTitle) {
-            return 1;
-        } else if (aTitle < bTitle) {
-            return -1;
-        } else {
-            return 0;
-        }
-    };
-
-    function sortByFavs (a, b) {
-        const aText = a.getElementsByClassName('z-padtop2')[0].textContent;
-        const bText = b.getElementsByClassName('z-padtop2')[0].textContent;
-        const aExec = / - Favs: ([\d,]+) - .+$/.exec(aText);
-        const bExec = / - Favs: ([\d,]+) - .+$/.exec(bText);
-        const aFavs = aExec ? parseInt(aExec[1].replace(/,/g, '')) : 0;
-        const bFavs = bExec ? parseInt(bExec[1].replace(/,/g, '')) : 0;
-
-        if (aFavs < bFavs) {
-            return 1;
-        } else if (aFavs > bFavs) {
-            return -1;
-        } else {
-            return sortByTitle(a, b);
-        }
-    }
-
-    function sortByFollows (a, b) {
-        const aText = a.getElementsByClassName('z-padtop2')[0].textContent;
-        const bText = b.getElementsByClassName('z-padtop2')[0].textContent;
-        const aExec = / - Follows: ([\d,]+) - .+$/.exec(aText);
-        const bExec = / - Follows: ([\d,]+) - .+$/.exec(bText);
-        const aFavs = aExec ? parseInt(aExec[1].replace(/,/g, '')) : 0;
-        const bFavs = bExec ? parseInt(bExec[1].replace(/,/g, '')) : 0;
-
-        if (aFavs < bFavs) {
-            return 1;
-        } else if (aFavs > bFavs) {
-            return -1;
-        } else {
-            return sortByTitle(a, b);
-        }
-    }
 
     // Main
     // Check standard of filterDic
@@ -154,58 +126,75 @@
             continue;
         }
 
-        // Add sorters
-        const favSpan = document.createElement('span');
-        favSpan.textContent = 'Favs';
-        favSpan.className = 'gray';
-        favSpan.addEventListener('click', (e) => {
-            // .filter_placeholder is added by
-            // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
-            const zListTags = tabInside.querySelectorAll('div.z-list:not(.filter_placeholder)');
-            const placeHolderTags = tabInside.getElementsByClassName('filter_placeholder');
-            const fragment = document.createDocumentFragment();
-            [...zListTags]
-                .sort(sortByFavs)
-                .forEach(x => {
-                    if (placeHolderTags.length) {
-                        [...placeHolderTags]
-                            .filter(p => x.dataset.storyid === p.dataset.storyid)
-                            .forEach(p => fragment.appendChild(p));
-                    }
-                    fragment.appendChild(x);
-                });
-            tabInside.appendChild(fragment);
-        });
+        // Sorter functions
+        const makeSorterFunctionBy = (dataId, order = 'asc') => {
+            const sorterFunctionBy = (a, b) => {
+                const aData = makeStoryData(a);
+                const bData = makeStoryData(b);
+                if (aData[dataId] < bData[dataId]) {
+                    return order === 'asc' ? -1 : 1;
+                } else if (aData[dataId] > bData[dataId]) {
+                    return order === 'asc' ? 1 : -1;
+                } else {
+                    const sortByTitle = makeSorterFunctionBy('title');
+                    return sortByTitle(a, b);
+                }
+            };
+            return sorterFunctionBy;
+        };
 
-        const followSpan = document.createElement('span');
-        followSpan.textContent = 'Follows';
-        followSpan.className = 'gray';
-        followSpan.addEventListener('click', (e) => {
-            // .filter_placeholder is added by
-            // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
-            const zListTags = tabInside.querySelectorAll('div.z-list:not(.filter_placeholder)');
-            const placeHolderTags = tabInside.getElementsByClassName('filter_placeholder');
-            const fragment = document.createDocumentFragment();
-            [...zListTags]
-                .sort(sortByFollows)
-                .forEach(x => {
-                    if (placeHolderTags.length) {
-                        [...placeHolderTags]
-                            .filter(p => x.dataset.storyid === p.dataset.storyid)
-                            .forEach(p => fragment.appendChild(p));
-                    }
-                    fragment.appendChild(x);
+        const makeSorterTag = (sorterDic) => {
+            const sorterId = sorterDic.dataId;
+            const sorterText = sorterDic.text;
+            const firstOrder = sorterDic.order;
+            const sorterSpan = document.createElement('span');
+            sorterSpan.textContent = sorterText;
+            sorterSpan.classList.add('fas-sorter');
+            sorterSpan.dataset.order = '';
+            sorterSpan.addEventListener('click', (e) => {
+                const sortedWithFirstOrder = e.target.dataset.order === orderSymbol[firstOrder];
+                const sorterTags = document.getElementsByClassName('fas-sorter');
+                [...sorterTags].forEach(sorterTag => {
+                    sorterTag.dataset.order = '';
                 });
-            tabInside.appendChild(fragment);
-        });
+                const [secondOrder] = ['asc', 'dsc'].filter(x => x !== firstOrder);
+                const nextOrder = sortedWithFirstOrder ? secondOrder : firstOrder;
+                e.target.dataset.order = orderSymbol[nextOrder];
+                const sortBySorterId = makeSorterFunctionBy(sorterId, nextOrder);
+                // .filter_placeholder is added by
+                // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
+                const zListTags = tabInside.querySelectorAll('div.z-list:not(.filter_placeholder)');
+                const placeHolderTags = tabInside.getElementsByClassName('filter_placeholder');
+                const fragment = document.createDocumentFragment();
+                [...zListTags]
+                    .sort(sortBySorterId)
+                    .forEach(x => {
+                        if (placeHolderTags.length) {
+                            [...placeHolderTags]
+                                .filter(p => x.dataset.storyid === p.dataset.storyid)
+                                .forEach(p => fragment.appendChild(p));
+                        }
+                        fragment.appendChild(x);
+                    });
+                tabInside.appendChild(fragment);
+            });
+            return sorterSpan;
+        };
+
+        // Make sorters
+        // Remvoe original sorter span
+        while (tab.firstElementChild.firstChild) {
+            tab.firstElementChild.removeChild(tab.firstElementChild.firstChild);
+        }
 
         // Append sorters
         const fragment = document.createDocumentFragment();
-        fragment.appendChild(document.createTextNode(' '));
-        fragment.appendChild(favSpan);
-        fragment.appendChild(document.createTextNode(' . '));
-        fragment.appendChild(followSpan);
-        fragment.appendChild(document.createTextNode(' . '));
+        fragment.appendChild(document.createTextNode('Sort: '));
+        sorterDicList.forEach(sorterDic => {
+            const sorterSpan = makeSorterTag(sorterDic);
+            fragment.appendChild(sorterSpan);
+            fragment.appendChild(document.createTextNode(' . '));
+        });
         tab.firstElementChild.appendChild(fragment);
 
         // Filter functions
@@ -219,8 +208,7 @@
             storyData.updated = parseInt(zList.dataset.dateupdate);
             storyData.reviews = parseInt(zList.dataset.ratingtimes);
             storyData.chapters = parseInt(zList.dataset.chapters);
-            storyData.word_count_gt = parseInt(zList.dataset.wordcount);
-            storyData.word_count_le = parseInt(zList.dataset.wordcount);
+            storyData.word_count = parseInt(zList.dataset.wordcount);
             storyData.status = parseInt(zList.dataset.statusid) === 1 ? 'In-Progress' : 'Complete';
 
             // .zList.filter_placeholder tag doesn't have .z-padtop2 tag.
@@ -304,7 +292,7 @@
             return matches ? parseInt(matches[0]) * parseInt(matches[1]) : null;
         };
 
-        // Judge if a story with storyValue passes through filter with selectvalue.
+        // Judge if a story with storyValue passes through filter with selectValue.
         const throughFilter = (storyValue, selectValue, filterKey) => {
             if (selectValue === 'default') {
                 return true;
@@ -496,6 +484,7 @@
             // Hide same value when filterKey uses same dataId.
             Object.keys(filterDic)
                 .filter(filterKey => selectDic[filterKey].accessible)
+                .filter(filterKey => !filterDic[filterKey].options)
                 .forEach(filterKey => {
                     const filterKeysBySameDataId = Object.keys(filterDic)
                         .filter(x => selectDic[x].accessible)
@@ -757,7 +746,6 @@
                 badge.textContent = [...Object.keys(storyDic)].length;
             }
         });
-        // Add clear feature
         filterDiv.appendChild(clear);
 
         // Append filters

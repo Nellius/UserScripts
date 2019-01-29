@@ -42,7 +42,7 @@ Add filters and additional sorters to author page of Fanfiction.net.
 #### Add new filters
 
 You can add new filters by creating new property in filterDic.
-For example, if you want second 'Genre' filter, add new genre filter peroptery with unique key to filterDic.
+For example, if you want second 'Genre' filter, add new genre filter property with unique key to filterDic.
 
 #### Add exclude filters
 
@@ -72,9 +72,8 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
         //language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre_a: { dataId: 'genre', text: 'Genre A', title: "Genre a filter", mode: 'contain' },
         genre_b: { dataId: 'genre', text: 'Genre B', title: "Genre b filter", mode: 'contain' },
-        not_genre: { dataId: 'genre', text: 'Not Genre', title: "Genre filter", mode: 'contain', reverse: true },
-        word_count_gt: { dataId: 'word_count_gt', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
-        word_count_le: { dataId: 'word_count_le', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
+        word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
+        word_count_le: { dataId: 'word_count', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
         reviews: { dataId: 'reviews', text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
         favs: { dataId: 'favs', text: 'Favs', title: "Fav count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
         follows: { dataId: 'follows', text: 'Follows', title: "Follow count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
@@ -90,7 +89,7 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
     };
 ```
 
-### Edit filter options
+### Edit numerical options
 
 When filter mode is 'gt', 'ge', 'le' or 'dateRange', you have to specify options property. Also you can edit options by changing specified options property.
 
@@ -114,6 +113,36 @@ For example, if you want to single out stories with greater than 200K word count
 ```javascript
     // Whether or not to sort characters of relationship in ascending order
     const SORT_CHARACTERS_OF_RELATIONSHIP = true;
+```
+
+## Sorter Setting
+
+### Mangage sorters
+
+```javascript
+    // Sorter Setting
+    // dataId: property key of storyData defined in makeStoryData()
+    // text: displayed sorter name
+    // order: 'asc' or 'dsc'
+    const sorterDicList = [
+        { dataId: 'fandom', text: 'Category', order: 'asc' },
+        { dataId: 'updated', text: 'Updated', order: 'dsc' },
+        { dataId: 'published', text: 'Published', order: 'dsc' },
+        { dataId: 'title', text: 'Title', order: 'asc' },
+        { dataId: 'word_count', text: 'Words', order: 'dsc' },
+        { dataId: 'chapters', text: 'Chapters', order: 'dsc' },
+        { dataId: 'reviews', text: 'Reviews', order: 'dsc' },
+        { dataId: 'favs', text: 'Favs', order: 'dsc' },
+        { dataId: 'follows', text: 'Follows', order: 'dsc' },
+        { dataId: 'status', text: 'Status', order: 'asc' }
+    ];
+```
+
+### Change 'asc', 'dsc' symbol
+
+```javascript
+    // Specify symbols to represent 'asc' and 'dsc'.
+    const orderSymbol = { asc: '▲', dsc: '▼' };
 ```
 
 ## Compatible
