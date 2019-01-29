@@ -17,7 +17,8 @@ Add filters and additional sorters to author page of Fanfiction.net.
 - Rating
 - Language
 - Genre
-- Chapters
+- Chapter number greater than
+- Chapter number less or equal
 - Word count greater than
 - Word count less or equal
 - Reviews
@@ -73,7 +74,8 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
         //language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre_a: { dataId: 'genre', text: 'Genre A', title: "Genre a filter", mode: 'contain' },
         genre_b: { dataId: 'genre', text: 'Genre B', title: "Genre b filter", mode: 'contain' },
-        chapters: { dataId: 'chapters', text: 'Chapaters', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
+        chapters_gt: { dataId: 'chapters', text: '< Chapaters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
+        chapters_le: { dataId: 'chapters', text: 'Chapaters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
         word_count_le: { dataId: 'word_count', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
         reviews: { dataId: 'reviews', text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
