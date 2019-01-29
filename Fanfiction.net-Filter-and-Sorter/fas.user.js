@@ -14,6 +14,9 @@
 
     // Filter Setting
     // Options for 'gt', 'ge', 'le', 'dateRange' mode.
+    // Options for chapters filters.
+    // Format: [\d+(K)?] in ascending order
+    const chapterOptions = ['1', '2', '5', '10', '20', '30', '50'];
     // Options for word_count_gt and word_count_le filters.
     // Format: [\d+(K)?] in ascending order
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K'];
@@ -36,6 +39,7 @@
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre: { dataId: 'genre', text: 'Genre', title: "Genre filter", mode: 'contain' },
+        chapters: { dataId: 'chapters', text: 'Chapaters', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
         word_count_le: { dataId: 'word_count', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
         reviews: { dataId: 'reviews', text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
@@ -508,6 +512,7 @@
                 .filter(x => storyDic[x].displayFlag)
                 .sort();
 
+            // Add/remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
             Object.keys(selectDic)
                 .filter(filterKey => selectDic[filterKey].accessible)
                 .forEach(filterKey => {
