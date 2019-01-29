@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.9
+// @version      0.91
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -45,7 +45,7 @@
         published: { dataId: 'published', text: 'Published', title: "Published date range filter", mode: 'dateRange', options: dateRangeOptions },
         character_a: { dataId: 'character', text: 'Character A', title: "Character filter a", mode: 'contain' },
         character_b: { dataId: 'character', text: 'Character B', title: "Character filter b", mode: 'contain' },
-        not_character: { dataId: 'character', text: 'Not Character', title: "Character filter b", mode: 'contain', reverse: true },
+        not_character: { dataId: 'character', text: 'Not Character', title: "Character reverse filter", mode: 'contain', reverse: true },
         relationship: { dataId: 'relationship', text: 'Relationship', title: "Relationship filter", mode: 'contain' },
         status: { dataId: 'status', text: 'Status', title: "Status filer", mode: 'equal' }
     };
@@ -80,8 +80,9 @@
         ".fas-sorter:after { content: attr(data-order); }",
         ".fas-filter-menus { color: gray; font-size: .9em; }",
         ".fas-filter-menu { font-size: 1em; padding: 1px 1px; height: 23px; margin: .1em auto; }",
+        ".fas-filter-execlude-menu { border-color: #777; }",
         ".fas-filter-menu_locked { background-color: #ccc; }",
-        ".fas-filter-menu:disabled { border: #999; background-color: #999; }",
+        ".fas-filter-menu:disabled { border-color: #999; background-color: #999; }",
         ".fas-filter-menu-item { color: #555; }",
         ".fas-filter-menu-item:checked { background-color: #ccc; }",
         ".fas-filter-menu-item_locked { background-color: #ccc; }"
@@ -503,7 +504,10 @@
                     }
                 });
 
-            // Add/remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
+            const filteredStoryIds = Object.keys(storyDic)
+                .filter(x => storyDic[x].displayFlag)
+                .sort();
+
             Object.keys(selectDic)
                 .filter(filterKey => selectDic[filterKey].accessible)
                 .forEach(filterKey => {
@@ -511,14 +515,11 @@
 
                     // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
                     selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked');
-                    selectDic[filterKey].defaultOption.dom.classList.remove('fas-filter-menu_locked');
+                    selectDic[filterKey].defaultOption.dom.classList.remove('fas-filter-menu-item_locked');
                     Object.keys(optionDic)
                         .forEach(x => optionDic[x].dom.classList.remove('fas-filter-menu-item_locked'));
 
                     // Add .fas-filter-menu-item_locked to default option when defaultStoryIds are equal to filteredStoryIds.
-                    const filteredStoryIds = Object.keys(storyDic)
-                        .filter(x => storyDic[x].displayFlag)
-                        .sort();
                     const defaultStoryIds = makeAlternatelyFilteredStoryIds(storyDic, 'default', filterKey);
                     const defaultOptionLocked = JSON.stringify(filteredStoryIds) === JSON.stringify(defaultStoryIds);
 
@@ -552,8 +553,6 @@
             const badge = document.getElementById('l_' + tabId).firstElementChild;
             const displayedStoryNumber = [...Object.keys(storyDic).filter(x => storyDic[x].displayFlag)].length;
             badge.textContent = displayedStoryNumber;
-
-            console.log(storyDic);
         };
 
         // Add filters
@@ -573,6 +572,9 @@
             selectTag.id = tabId + '_' + filterKey + '_select';
             selectTag.title = filterDic[filterKey].title;
             selectTag.classList.add('fas-filter-menu');
+            if (filterDic[filterKey].reverse) {
+                selectTag.classList.add('fas-filter-execlude-menu');
+            }
             const defaultOption = document.createElement('option');
             defaultOption.textContent = defaultText;
             defaultOption.value = 'default';
