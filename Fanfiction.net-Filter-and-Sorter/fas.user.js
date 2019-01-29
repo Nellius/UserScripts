@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.92
+// @version      0.921
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -16,7 +16,7 @@
     // Options for 'gt', 'ge', 'le', 'dateRange' mode.
     // Options for chapters filters.
     // Format: [\d+(K)?] in ascending order
-    const chapterOptions = ['1', '2', '5', '10', '20', '30', '50'];
+    const chapterOptions = ['1', '5', '10', '20', '30', '50'];
     // Options for word_count_gt and word_count_le filters.
     // Format: [\d+(K)?] in ascending order
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K'];
@@ -39,7 +39,8 @@
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre: { dataId: 'genre', text: 'Genre', title: "Genre filter", mode: 'contain' },
-        chapters: { dataId: 'chapters', text: 'Chapaters', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
+        chapters_gt: { dataId: 'chapters', text: '< Chapaters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
+        chapters_le: { dataId: 'chapters', text: 'Chapaters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
         word_count_le: { dataId: 'word_count', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
         reviews: { dataId: 'reviews', text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
