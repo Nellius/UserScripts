@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.921
+// @version      0.93
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -89,7 +89,6 @@
         ".fas-filter-menu_locked { background-color: #ccc; }",
         ".fas-filter-menu:disabled { border-color: #999; background-color: #999; }",
         ".fas-filter-menu-item { color: #555; }",
-        ".fas-filter-menu-item:checked { background-color: #ccc; }",
         ".fas-filter-menu-item_locked { background-color: #ccc; }"
     ].join(''));
 
@@ -408,11 +407,7 @@
                 if (selectDic[filterKey].accessible) {
                     const optionTags = selectTag.getElementsByTagName('option');
                     [...optionTags].forEach(optionTag => {
-                        if (optionTag.value === 'default') {
-                            selectDic[filterKey].defaultOption = { dom: optionTag };
-                        } else {
-                            selectDic[filterKey].optionDic[optionTag.value] = { dom: optionTag };
-                        }
+                        selectDic[filterKey].optionDic[optionTag.value] = { dom: optionTag };
                     });
                 }
             });
@@ -457,7 +452,7 @@
                         if (['gt', 'ge', 'le', 'dateRange'].includes(filterMode)) {
                             const reverse = (filterDic[filterKey].reverse);
                             const sufficientOptionValues = usableStoryValues.map(storyValue => {
-                                const optionValues = Object.keys(optionDic);
+                                const optionValues = Object.keys(optionDic).filter(x => x !== 'default');
                                 const throughOptionValues = optionValues
                                     .filter(optionValue => {
                                         const result = throughFilter(storyValue, optionValue, filterKey);
@@ -477,7 +472,7 @@
 
                     // Add/remove hidden attribute to options.
                     Object.keys(optionDic).forEach(optionValue => {
-                        const usable = usableOptionValues.includes(optionValue);
+                        const usable = optionValue === 'default' ? true : usableOptionValues.includes(optionValue);
                         optionDic[optionValue].usable = usable;
                         if (!usable) {
                             optionDic[optionValue].dom.setAttribute('hidden', '');
@@ -521,26 +516,18 @@
 
                     // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
                     selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked');
-                    selectDic[filterKey].defaultOption.dom.classList.remove('fas-filter-menu-item_locked');
                     Object.keys(optionDic)
                         .forEach(x => optionDic[x].dom.classList.remove('fas-filter-menu-item_locked'));
-
-                    // Add .fas-filter-menu-item_locked to default option when defaultStoryIds are equal to filteredStoryIds.
-                    const defaultStoryIds = makeAlternatelyFilteredStoryIds(storyDic, 'default', filterKey);
-                    const defaultOptionLocked = JSON.stringify(filteredStoryIds) === JSON.stringify(defaultStoryIds);
-
-                    if (defaultOptionLocked) {
-                        selectDic[filterKey].defaultOption.dom.classList.add('fas-filter-menu-item_locked');
-                    }
 
                     // Add .fas-filter-menu_locked
                     // when every alternatelyFilteredStoryIds are equal to filteredStoryIds,
                     // or there are no usable options.
-                    const otherOptionsLocked = Object.keys(optionDic)
+                    const optionsLocked = Object.keys(optionDic)
                         .filter(optionValue => optionDic[optionValue].usable)
-                        .filter(optionValue => !(filterKey === selectKey && optionValue === selectValue))
                         .map(optionValue => {
                             const alternatelyFilteredStoryIds = makeAlternatelyFilteredStoryIds(storyDic, optionValue, filterKey);
+                            optionDic[optionValue].storyNumber = alternatelyFilteredStoryIds.length;
+
                             const idsEqualFlag = JSON.stringify(filteredStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
                             if (idsEqualFlag) {
                                 optionDic[optionValue].dom.classList.add('fas-filter-menu-item_locked');
@@ -549,7 +536,6 @@
                         }).every(x => x); // [].every(x => x) === true, [].some(x => x) === false
 
                     // Add .fas-filter-menu-item_locked
-                    const optionsLocked = defaultOptionLocked && otherOptionsLocked;
                     if (optionsLocked) {
                         selectDic[filterKey].dom.classList.add('fas-filter-menu_locked');
                     }
