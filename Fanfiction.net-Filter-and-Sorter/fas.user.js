@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.94
+// @version      0.941
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -90,15 +90,17 @@
         ".fas-filter-menu:disabled { border-color: #999; background-color: #999; }",
         ".fas-filter-menu-item { color: #555; }",
         ".fas-filter-menu-item_locked { background-color: #ccc; }",
-        ".fas-filter-menu-item_1st-largest { background-color: #f96540; }",
-        ".fas-filter-menu-item_2nd-largest { background-color: #f4a26d; }",
-        ".fas-filter-menu-item_3rd-largest { background-color: #efcc99; }"
+        ".fas-filter-menu-item_1st-largest { background-color: #ff1111; }",
+        ".fas-filter-menu-item_2nd-largest { background-color: #f96540; }",
+        ".fas-filter-menu-item_3rd-largest { background-color: #f4a26d; }",
+        ".fas-filter-menu-item_4th-largest { background-color: #efcc99; }"
     ].join(''));
 
     const menuItemFilterResultClasses = [
         'fas-filter-menu-item_1st-largest',
         'fas-filter-menu-item_2nd-largest',
-        'fas-filter-menu-item_3rd-largest'
+        'fas-filter-menu-item_3rd-largest',
+        'fas-filter-menu-item_4th-largest'
     ];
 
     // Main
