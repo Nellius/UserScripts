@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.921
+// @version      0.95
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -89,9 +89,19 @@
         ".fas-filter-menu_locked { background-color: #ccc; }",
         ".fas-filter-menu:disabled { border-color: #999; background-color: #999; }",
         ".fas-filter-menu-item { color: #555; }",
-        ".fas-filter-menu-item:checked { background-color: #ccc; }",
-        ".fas-filter-menu-item_locked { background-color: #ccc; }"
+        ".fas-filter-menu-item_locked { font-style: oblique; }",
+        ".fas-filter-menu-item_1st-largest-group { background-color: #ff1111; }",
+        ".fas-filter-menu-item_2nd-largest-group { background-color: #f96540; }",
+        ".fas-filter-menu-item_3rd-largest-group { background-color: #f4a26d; }",
+        ".fas-filter-menu-item_4th-largest-group { background-color: #efcc99; }"
     ].join(''));
+
+    const menuItemFilterResultClasses = [
+        'fas-filter-menu-item_1st-largest-group',
+        'fas-filter-menu-item_2nd-largest-group',
+        'fas-filter-menu-item_3rd-largest-group',
+        'fas-filter-menu-item_4th-largest-group'
+    ];
 
     // Main
     // Check standard of filterDic
@@ -408,16 +418,24 @@
                 if (selectDic[filterKey].accessible) {
                     const optionTags = selectTag.getElementsByTagName('option');
                     [...optionTags].forEach(optionTag => {
-                        if (optionTag.value === 'default') {
-                            selectDic[filterKey].defaultOption = { dom: optionTag };
-                        } else {
-                            selectDic[filterKey].optionDic[optionTag.value] = { dom: optionTag };
-                        }
+                        selectDic[filterKey].optionDic[optionTag.value] = { dom: optionTag };
                     });
                 }
             });
 
             return selectDic;
+        };
+
+        // generateCombinations([1, 2, 3], 2) === [[1, 2], [1, 3], [2, 3]]
+        const generateCombinations = (xs, count, previous = []) => {
+            if (count === 0) {
+                return [previous];
+            } else {
+                return xs.reduce((acc, c, i) => {
+                    const nxs = xs.filter((_, j) => j > i);
+                    return [...acc, ...generateCombinations(nxs, count - 1, [...previous, c])];
+                }, []);
+            }
         };
 
         // Apply selectKey filter with selectValue to all stories.
@@ -451,13 +469,12 @@
                             .filter((x, i, self) => self.indexOf(x) === i)
                             .sort((a, b) => a - b);
 
+                        // Remove redundant options when filter mode is 'gt', 'ge', 'le', or 'dateRange'
                         const filterMode = filterDic[filterKey].mode;
-                        // Filters with ['gt', 'ge', 'le', 'dateRange'] mode can have redundant options.
-                        // Remove redundant options.
                         if (['gt', 'ge', 'le', 'dateRange'].includes(filterMode)) {
                             const reverse = (filterDic[filterKey].reverse);
                             const sufficientOptionValues = usableStoryValues.map(storyValue => {
-                                const optionValues = Object.keys(optionDic);
+                                const optionValues = Object.keys(optionDic).filter(x => x !== 'default');
                                 const throughOptionValues = optionValues
                                     .filter(optionValue => {
                                         const result = throughFilter(storyValue, optionValue, filterKey);
@@ -477,7 +494,8 @@
 
                     // Add/remove hidden attribute to options.
                     Object.keys(optionDic).forEach(optionValue => {
-                        const usable = usableOptionValues.includes(optionValue);
+                        // usableOptioinValues don't include 'default'.
+                        const usable = optionValue === 'default' ? true : usableOptionValues.includes(optionValue);
                         optionDic[optionValue].usable = usable;
                         if (!usable) {
                             optionDic[optionValue].dom.setAttribute('hidden', '');
@@ -513,45 +531,103 @@
                 .filter(x => storyDic[x].displayFlag)
                 .sort();
 
-            // Add/remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
+            // Add/remove .fas-filter-menu_locked, .fas-filter-menu-item_locked and menuItemFilterResultClasses.
             Object.keys(selectDic)
                 .filter(filterKey => selectDic[filterKey].accessible)
                 .forEach(filterKey => {
                     const optionDic = selectDic[filterKey].optionDic;
 
-                    // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked.
+                    // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked and menuItemFilterResultClasses.
                     selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked');
-                    selectDic[filterKey].defaultOption.dom.classList.remove('fas-filter-menu-item_locked');
-                    Object.keys(optionDic)
-                        .forEach(x => optionDic[x].dom.classList.remove('fas-filter-menu-item_locked'));
+                    Object.keys(optionDic).forEach(x => {
+                        optionDic[x].dom.classList.remove('fas-filter-menu-item_locked', ...menuItemFilterResultClasses);
+                    });
 
-                    // Add .fas-filter-menu-item_locked to default option when defaultStoryIds are equal to filteredStoryIds.
-                    const defaultStoryIds = makeAlternatelyFilteredStoryIds(storyDic, 'default', filterKey);
-                    const defaultOptionLocked = JSON.stringify(filteredStoryIds) === JSON.stringify(defaultStoryIds);
-
-                    if (defaultOptionLocked) {
-                        selectDic[filterKey].defaultOption.dom.classList.add('fas-filter-menu-item_locked');
-                    }
-
-                    // Add .fas-filter-menu_locked
-                    // when every alternatelyFilteredStoryIds are equal to filteredStoryIds,
-                    // or there are no usable options.
-                    const otherOptionsLocked = Object.keys(optionDic)
+                    // Add .fas-filter-menu-item_locked to each option tag
+                    // when alternatelyFilteredStoryIds are equal to filteredStoryIds.
+                    const optionsLocked = Object.keys(optionDic)
                         .filter(optionValue => optionDic[optionValue].usable)
-                        .filter(optionValue => !(filterKey === selectKey && optionValue === selectValue))
                         .map(optionValue => {
                             const alternatelyFilteredStoryIds = makeAlternatelyFilteredStoryIds(storyDic, optionValue, filterKey);
+                            optionDic[optionValue].storyNumber = alternatelyFilteredStoryIds.length;
+
                             const idsEqualFlag = JSON.stringify(filteredStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
                             if (idsEqualFlag) {
                                 optionDic[optionValue].dom.classList.add('fas-filter-menu-item_locked');
                             }
                             return idsEqualFlag;
-                        }).every(x => x); // [].every(x => x) === true, [].some(x => x) === false
+                        }).every(x => x);
 
-                    // Add .fas-filter-menu-item_locked
-                    const optionsLocked = defaultOptionLocked && otherOptionsLocked;
                     if (optionsLocked) {
+                        // Add .fas-filter-menu_locked to select tag
+                        // when every alternatelyFilteredStoryIds are equal to filteredStoryIds.
                         selectDic[filterKey].dom.classList.add('fas-filter-menu_locked');
+                    } else {
+                        // Highlight options by filter result by adding menuItemFilterResultClasses
+
+                        // Remove menuItemFilterResultClasses
+                        Object.keys(optionDic).forEach(optionValue => {
+                            optionDic[optionValue].dom.classList.remove(...menuItemFilterResultClasses);
+                        });
+
+                        // Unique storyNumber in dsc order
+                        const filterResults = Object.keys(optionDic)
+                            .filter(optionValue => optionDic[optionValue].usable)
+                            .map(optionValue => optionDic[optionValue].storyNumber)
+                            .filter((x, i, self) => self.indexOf(x) === i)
+                            .sort((a, b) => b - a);
+
+                        // +1 is for options without added class
+                        const classesLength = menuItemFilterResultClasses.length + 1;
+                        // Generate combinations of fiilterResults which is divided into classesLength groups.
+                        const dividedResultsCombinations = (() => {
+                            if (classesLength === 1 || filterResults.length <= classesLength) {
+                                // There is no need to divide fiilterResults.
+                                return [filterResults.map(x => [x])];
+                            } else {
+                                // Generate combinations of divideIndexes.
+                                // Divide filterResults by using divideIndexesCombination.
+                                const divideIndexes = [...Array(filterResults.length - 1).keys()].map(x => x + 1);
+                                return generateCombinations(divideIndexes, classesLength - 1).map(divideIndexesCombination => {
+                                    const lastIndex = divideIndexesCombination.length - 1;
+                                    const dividedResultsCombination = [filterResults.slice(0, divideIndexesCombination[0])];
+                                    for (let i = 0; i < lastIndex; i++) {
+                                        dividedResultsCombination.push(
+                                            filterResults.slice(divideIndexesCombination[i], divideIndexesCombination[i + 1])
+                                        );
+                                    }
+                                    dividedResultsCombination.push(filterResults.slice(divideIndexesCombination[lastIndex]));
+                                    return dividedResultsCombination;
+                                });
+                            }
+                        })();
+
+                        // Jenks Natural Breaks.
+                        // For each dividedResultsCombination, calculate sum of squared deviations for class means(SDCM).
+                        // dividedResultsCombination with minimum SDCM score is the best match.
+                        const minIndex = (() => {
+                            if (dividedResultsCombinations.length === 1) {
+                                return 0;
+                            } else {
+                                return dividedResultsCombinations.map(dividedResultsCombination => {
+                                    return dividedResultsCombination.map(dividedResults => {
+                                        const classMean = dividedResults.reduce((p, x) => p + x) / dividedResults.length;
+                                        return dividedResults.map(x => (x - classMean) ** 2).reduce((p, x) => p + x);
+                                    }).reduce((p, x) => p + x);
+                                }).reduce((iMin, x, i, self) => x < self[iMin] ? i : iMin, 0);
+                            }
+                        })();
+
+                        // Add menuItemFilterResultClasses according to dividedResultsCombinations[minIndex]
+                        Object.keys(optionDic)
+                            .filter(optionValue => optionDic[optionValue].usable)
+                            .forEach(optionValue => {
+                                const dividedResultsIndex = dividedResultsCombinations[minIndex]
+                                    .findIndex(dividedResults => dividedResults.includes(optionDic[optionValue].storyNumber));
+                                if (dividedResultsIndex < menuItemFilterResultClasses.length) {
+                                    optionDic[optionValue].dom.classList.add(menuItemFilterResultClasses[dividedResultsIndex]);
+                                }
+                            });
                     }
                 });
 
@@ -571,7 +647,7 @@
         const initialStoryIds = Object.keys(initialStoryDic).sort();
 
         // Log initial attributes and classList for clear feature.
-        const initialLockedDic = {};
+        const initialSelectDic = {};
 
         const makeSelectTag = (filterKey, defaultText) => {
             const selectTag = document.createElement('select');
@@ -581,11 +657,6 @@
             if (filterDic[filterKey].reverse) {
                 selectTag.classList.add('fas-filter-execlude-menu');
             }
-            const defaultOption = document.createElement('option');
-            defaultOption.textContent = defaultText;
-            defaultOption.value = 'default';
-            defaultOption.classList.add('fas-filter-menu-item');
-            selectTag.appendChild(defaultOption);
 
             // Make optionValues from
             // filterKey values of each story, wordCountOptions, kudoCountOptions or dateRangeOptions.
@@ -613,8 +684,7 @@
                         }
                     })();
 
-                    // Filters with ['gt', 'ge', 'le', 'dateRange'] mode can have redundant options.
-                    // Remove redundant options.
+                    // Remove redundant options when filter mode is 'gt', 'ge', 'le', or 'dateRange'
                     const reverse = (filterDic[filterKey].reverse);
                     const sufficientOptionValues = storyValues.map(storyValue => {
                         const throughOptionValues = allOptionValues
@@ -636,26 +706,28 @@
                 }
             })();
 
-            initialLockedDic[filterKey] = {};
-            initialLockedDic[filterKey].menuDisabled = false;
-            initialLockedDic[filterKey].menuLocked = false;
-            initialLockedDic[filterKey].itemLockedDic = {};
+            initialSelectDic[filterKey] = {};
+            initialSelectDic[filterKey].initialMenuClasses = [];
+            initialSelectDic[filterKey].menuDisabled = false;
+            initialSelectDic[filterKey].initialOptionDic = {};
+            const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
 
-            const initialOptionLocked = optionValues.map(optionValue => {
-                initialLockedDic[filterKey].itemLockedDic[optionValue] = false;
+            // Add .fas-filter-menu-item_locked to each option tag
+            // when alternatelyFilteredStoryIds are equal to initialStoryIds.
+            const initialOptionLocked = ['default', ...optionValues].map(optionValue => {
+                initialOptionDic[optionValue] = {};
 
                 const option = document.createElement('option');
-                option.textContent = optionValue;
+                option.textContent = optionValue === 'default' ? defaultText : optionValue;
                 option.value = optionValue;
                 option.classList.add('fas-filter-menu-item');
 
                 const alternatelyFilteredStoryIds =
                     makeAlternatelyFilteredStoryIds(initialStoryDic, optionValue, filterKey);
-                const idsEqualFlag = JSON.stringify(initialStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
+                initialOptionDic[optionValue].storyNumber = alternatelyFilteredStoryIds.length;
 
-                // Add .fas-filter-menu-item_locked when alternatelyFilteredStoryIds are equal to initialStoryIds.
+                const idsEqualFlag = JSON.stringify(initialStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
                 if (idsEqualFlag) {
-                    initialLockedDic[filterKey].itemLockedDic[optionValue] = true;
                     option.classList.add('fas-filter-menu-item_locked');
                 }
                 selectTag.appendChild(option);
@@ -663,23 +735,88 @@
                 return idsEqualFlag;
             }).every(x => x);
 
-            // When every alternatelyFilteredStoryIds are equal to initialStoryIds,
             const optionTags = selectTag.getElementsByTagName('option');
             if (initialOptionLocked) {
-                // if every story have no filter value, don't display filter.
+                // When every alternatelyFilteredStoryIds are equal to initialStoryIds,
                 if (optionTags.length === 1) {
+                    // if every story have no filter value, don't display filter.
                     selectTag.style.display = 'none';
-                // if every stories has same value, disable filter.
                 } else if (optionTags.length === 2) {
+                    // if every stories has same value, disable filter.
                     selectTag.value = optionTags[1].value;
-                    initialLockedDic[filterKey].menuDisabled = true;
+                    initialSelectDic[filterKey].menuDisabled = true;
                     selectTag.setAttribute('disabled', '');
-                // else, add .fas-filter-menu_locked.
                 } else {
-                    initialLockedDic[filterKey].menuLocked = true;
+                    // else, add .fas-filter-menu_locked.
                     selectTag.classList.add('fas-filter-menu_locked');
                 }
+            } else {
+                // Highlight options by filter result by adding menuItemFilterResultClasses
+                // Unique storyNumber in dsc order
+                const filterResults = Object.keys(initialOptionDic)
+                    .map(optionValue => initialOptionDic[optionValue].storyNumber)
+                    .filter((x, i, self) => self.indexOf(x) === i)
+                    .sort((a, b) => b - a);
+
+                // +1 is for options without added class
+                const classesLength = menuItemFilterResultClasses.length + 1;
+                // Generate combinations of fiilterResults which is divided into classesLength groups.
+                const dividedResultsCombinations = (() => {
+                    if (classesLength === 1 || filterResults.length <= classesLength) {
+                        // There is no need to divide fiilterResults.
+                        return [filterResults.map(x => [x])];
+                    } else {
+                        // Generate combinations of divideIndexes.
+                        // Divide filterResults by using divideIndexesCombination.
+                        const divideIndexes = [...Array(filterResults.length - 1).keys()].map(x => x + 1);
+                        return generateCombinations(divideIndexes, classesLength - 1).map(divideIndexesCombination => {
+                            const lastIndex = divideIndexesCombination.length - 1;
+                            const dividedResultsCombination = [filterResults.slice(0, divideIndexesCombination[0])];
+                            for (let i = 0; i < lastIndex; i++) {
+                                dividedResultsCombination.push(
+                                    filterResults.slice(divideIndexesCombination[i], divideIndexesCombination[i + 1])
+                                );
+                            }
+                            dividedResultsCombination.push(filterResults.slice(divideIndexesCombination[lastIndex]));
+                            return dividedResultsCombination;
+                        });
+                    }
+                })();
+
+                // Jenks Natural Breaks.
+                // For each dividedResultsCombination, calculate sum of squared deviations for class means(SDCM).
+                // dividedResultsCombination with minimum SDCM score is the best match.
+                const minIndex = (() => {
+                    if (dividedResultsCombinations.length === 1) {
+                        return 0;
+                    } else {
+                        return dividedResultsCombinations.map(dividedResultsCombination => {
+                            return dividedResultsCombination.map(dividedResults => {
+                                const classMean = dividedResults.reduce((p, x) => p + x) / dividedResults.length;
+                                return dividedResults.map(x => (x - classMean) ** 2).reduce((p, x) => p + x);
+                            }).reduce((p, x) => p + x);
+                        }).reduce((iMin, x, i, self) => x < self[iMin] ? i : iMin, 0);
+                    }
+                })();
+
+                // Add menuItemFilterResultClasses according to dividedResultsCombinations[minIndex]
+                Object.keys(initialOptionDic)
+                    .forEach(optionValue => {
+                        const dividedResultsIndex = dividedResultsCombinations[minIndex]
+                            .findIndex(dividedResults => dividedResults.includes(initialOptionDic[optionValue].storyNumber));
+                        if (dividedResultsIndex < menuItemFilterResultClasses.length) {
+                            [...optionTags]
+                                .filter(x => x.value === optionValue)
+                                .forEach(x => x.classList.add(menuItemFilterResultClasses[dividedResultsIndex]));
+                        }
+                    });
             }
+
+            // Log initial classList
+            initialSelectDic[filterKey].initialMenuClasses = [...selectTag.classList];
+            [...optionTags].forEach(optionTag => {
+                initialOptionDic[optionTag.value].initialItemClasses = [...optionTag.classList];
+            });
 
             // Change display of stories by selected filter value.
             selectTag.addEventListener('change', (e) => {
@@ -701,7 +838,7 @@
                 const filterDisabled = Object.keys(filterDic)
                     .filter(x => x !== filterKey)
                     .filter(x => filterDic[x].dataId === filterDic[filterKey].dataId)
-                    .filter(x => initialLockedDic[x].menuDisabled);
+                    .filter(x => initialSelectDic[x].menuDisabled);
 
                 if (filterDisabled.length) {
                     const selectTag = filterDiv.querySelector('#' + tabId + '_' + filterKey + '_select');
@@ -709,7 +846,7 @@
                 }
             });
 
-        // Clear filter settings and add attributes and class according to initialLockedDic.
+        // Clear filter settings and revert attributes and class according to initialSelectDic.
         const clear = document.createElement('span');
         clear.textContent = 'Clear';
         clear.title = "Reset filter values to default";
@@ -726,21 +863,24 @@
                 Object.keys(selectDic)
                     .filter(filterKey => selectDic[filterKey].accessible)
                     .forEach(filterKey => {
+                        // Clear each filter
                         selectDic[filterKey].dom.value = 'default';
-                        selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked');
-                        selectDic[filterKey].dom.classList.remove('fas-filter-menu_selected');
 
-                        if (initialLockedDic[filterKey].menuLocked) {
-                            selectDic[filterKey].dom.classList.add('fas-filter-menu_locked');
+                        // Revert attributes and class of select tag according to initialSelectDic.
+                        selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked', 'fas-filter-menu_selected');
+                        if (initialSelectDic[filterKey].initialMenuClasses.length > 1) {
+                            selectDic[filterKey].dom.classList.add(initialSelectDic[filterKey].initialMenuClasses);
                         }
 
+                        // Revert attributes and class of option tag according to optionDic.
                         const optionDic = selectDic[filterKey].optionDic;
                         Object.keys(optionDic).forEach(optionValue => {
-                            optionDic[optionValue].dom.classList.remove('fas-filter-menu-item_locked');
+                            optionDic[optionValue].dom.classList.remove('fas-filter-menu-item_locked', ...menuItemFilterResultClasses);
                             optionDic[optionValue].dom.removeAttribute('hidden');
 
-                            if (initialLockedDic[filterKey].itemLockedDic[optionValue]) {
-                                optionDic[optionValue].dom.classList.add('fas-filter-menu-item_locked');
+                            const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
+                            if (initialOptionDic[optionValue].initialItemClasses.length > 1) {
+                                optionDic[optionValue].dom.classList.add(...initialOptionDic[optionValue].initialItemClasses);
                             }
                         });
                     });
