@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.95
+// @version      0.951
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -93,7 +93,8 @@
         ".fas-filter-menu-item_1st-largest-group { background-color: #ff1111; }",
         ".fas-filter-menu-item_2nd-largest-group { background-color: #f96540; }",
         ".fas-filter-menu-item_3rd-largest-group { background-color: #f4a26d; }",
-        ".fas-filter-menu-item_4th-largest-group { background-color: #efcc99; }"
+        ".fas-filter-menu-item_4th-largest-group { background-color: #efcc99; }",
+        ".fas-filter-menu-item_story-zero { background-color: #999; }"
     ].join(''));
 
     const menuItemFilterResultClasses = [
@@ -540,7 +541,9 @@
                     // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked and menuItemFilterResultClasses.
                     selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked');
                     Object.keys(optionDic).forEach(x => {
-                        optionDic[x].dom.classList.remove('fas-filter-menu-item_locked', ...menuItemFilterResultClasses);
+                        optionDic[x].dom.classList.remove(
+                            'fas-filter-menu-item_locked', ...menuItemFilterResultClasses, 'fas-filter-menu-item_story-zero'
+                        );
                     });
 
                     // Add .fas-filter-menu-item_locked to each option tag
@@ -550,6 +553,9 @@
                         .map(optionValue => {
                             const alternatelyFilteredStoryIds = makeAlternatelyFilteredStoryIds(storyDic, optionValue, filterKey);
                             optionDic[optionValue].storyNumber = alternatelyFilteredStoryIds.length;
+                            if (filterDic[filterKey].reverse && alternatelyFilteredStoryIds.length === 0) {
+                                optionDic[optionValue].dom.classList.add('fas-filter-menu-item_story-zero');
+                            }
 
                             const idsEqualFlag = JSON.stringify(filteredStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
                             if (idsEqualFlag) {
@@ -725,6 +731,9 @@
                 const alternatelyFilteredStoryIds =
                     makeAlternatelyFilteredStoryIds(initialStoryDic, optionValue, filterKey);
                 initialOptionDic[optionValue].storyNumber = alternatelyFilteredStoryIds.length;
+                if (filterDic[filterKey].reverse && alternatelyFilteredStoryIds.length === 0) {
+                    option.classList.add('fas-filter-menu-item_story-zero');
+                }
 
                 const idsEqualFlag = JSON.stringify(initialStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
                 if (idsEqualFlag) {
@@ -875,7 +884,9 @@
                         // Revert attributes and class of option tag according to optionDic.
                         const optionDic = selectDic[filterKey].optionDic;
                         Object.keys(optionDic).forEach(optionValue => {
-                            optionDic[optionValue].dom.classList.remove('fas-filter-menu-item_locked', ...menuItemFilterResultClasses);
+                            optionDic[optionValue].dom.classList.remove(
+                                'fas-filter-menu-item_locked', ...menuItemFilterResultClasses, 'fas-filter-menu-item_story-zero'
+                            );
                             optionDic[optionValue].dom.removeAttribute('hidden');
 
                             const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
