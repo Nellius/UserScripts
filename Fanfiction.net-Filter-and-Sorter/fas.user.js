@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.941
+// @version      0.95
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -89,18 +89,18 @@
         ".fas-filter-menu_locked { background-color: #ccc; }",
         ".fas-filter-menu:disabled { border-color: #999; background-color: #999; }",
         ".fas-filter-menu-item { color: #555; }",
-        ".fas-filter-menu-item_locked { background-color: #ccc; }",
-        ".fas-filter-menu-item_1st-largest { background-color: #ff1111; }",
-        ".fas-filter-menu-item_2nd-largest { background-color: #f96540; }",
-        ".fas-filter-menu-item_3rd-largest { background-color: #f4a26d; }",
-        ".fas-filter-menu-item_4th-largest { background-color: #efcc99; }"
+        ".fas-filter-menu-item_locked { font-style: oblique; }",
+        ".fas-filter-menu-item_1st-largest-group { background-color: #ff1111; }",
+        ".fas-filter-menu-item_2nd-largest-group { background-color: #f96540; }",
+        ".fas-filter-menu-item_3rd-largest-group { background-color: #f4a26d; }",
+        ".fas-filter-menu-item_4th-largest-group { background-color: #efcc99; }"
     ].join(''));
 
     const menuItemFilterResultClasses = [
-        'fas-filter-menu-item_1st-largest',
-        'fas-filter-menu-item_2nd-largest',
-        'fas-filter-menu-item_3rd-largest',
-        'fas-filter-menu-item_4th-largest'
+        'fas-filter-menu-item_1st-largest-group',
+        'fas-filter-menu-item_2nd-largest-group',
+        'fas-filter-menu-item_3rd-largest-group',
+        'fas-filter-menu-item_4th-largest-group'
     ];
 
     // Main
@@ -426,6 +426,18 @@
             return selectDic;
         };
 
+        // generateCombinations([1, 2, 3], 2) === [[1, 2], [1, 3], [2, 3]]
+        const generateCombinations = (xs, count, previous = []) => {
+            if (count === 0) {
+                return [previous];
+            } else {
+                return xs.reduce((acc, c, i) => {
+                    const nxs = xs.filter((_, j) => j > i);
+                    return [...acc, ...generateCombinations(nxs, count - 1, [...previous, c])];
+                }, []);
+            }
+        };
+
         // Apply selectKey filter with selectValue to all stories.
         const filterStories = (selectKey, selectValue) => {
             const storyDic = makeStoryDic();
@@ -558,20 +570,62 @@
                             optionDic[optionValue].dom.classList.remove(...menuItemFilterResultClasses);
                         });
 
+                        // Unique storyNumber in dsc order
                         const filterResults = Object.keys(optionDic)
                             .filter(optionValue => optionDic[optionValue].usable)
                             .map(optionValue => optionDic[optionValue].storyNumber)
                             .filter((x, i, self) => self.indexOf(x) === i)
-                            .sort((a, b) => b - a)
-                            .slice(0, menuItemFilterResultClasses.length);
+                            .sort((a, b) => b - a);
 
-                        // Add menuItemFilterResultClasses according to order of filterResults
+                        // +1 is for options without added class
+                        const classesLength = menuItemFilterResultClasses.length + 1;
+                        // Generate combinations of fiilterResults which is divided into classesLength groups.
+                        const dividedResultsCombinations = (() => {
+                            if (classesLength === 1 || filterResults.length <= classesLength) {
+                                // There is no need to divide fiilterResults.
+                                return [filterResults.map(x => [x])];
+                            } else {
+                                // Generate combinations of divideIndexes.
+                                // Divide filterResults by using divideIndexesCombination.
+                                const divideIndexes = [...Array(filterResults.length - 1).keys()].map(x => x + 1);
+                                return generateCombinations(divideIndexes, classesLength - 1).map(divideIndexesCombination => {
+                                    const lastIndex = divideIndexesCombination.length - 1;
+                                    const dividedResultsCombination = [filterResults.slice(0, divideIndexesCombination[0])];
+                                    for (let i = 0; i < lastIndex; i++) {
+                                        dividedResultsCombination.push(
+                                            filterResults.slice(divideIndexesCombination[i], divideIndexesCombination[i + 1])
+                                        );
+                                    }
+                                    dividedResultsCombination.push(filterResults.slice(divideIndexesCombination[lastIndex]));
+                                    return dividedResultsCombination;
+                                });
+                            }
+                        })();
+
+                        // Jenks Natural Breaks.
+                        // For each dividedResultsCombination, calculate sum of squared deviations for class means(SDCM).
+                        // dividedResultsCombination with minimum SDCM score is the best match.
+                        const minIndex = (() => {
+                            if (dividedResultsCombinations.length === 1) {
+                                return 0;
+                            } else {
+                                return dividedResultsCombinations.map(dividedResultsCombination => {
+                                    return dividedResultsCombination.map(dividedResults => {
+                                        const classMean = dividedResults.reduce((p, x) => p + x) / dividedResults.length;
+                                        return dividedResults.map(x => (x - classMean) ** 2).reduce((p, x) => p + x);
+                                    }).reduce((p, x) => p + x);
+                                }).reduce((iMin, x, i, self) => x < self[iMin] ? i : iMin, 0);
+                            }
+                        })();
+
+                        // Add menuItemFilterResultClasses according to dividedResultsCombinations[minIndex]
                         Object.keys(optionDic)
                             .filter(optionValue => optionDic[optionValue].usable)
                             .forEach(optionValue => {
-                                const i = filterResults.indexOf(optionDic[optionValue].storyNumber);
-                                if (i !== -1) {
-                                    optionDic[optionValue].dom.classList.add(menuItemFilterResultClasses[i]);
+                                const dividedResultsIndex = dividedResultsCombinations[minIndex]
+                                    .findIndex(dividedResults => dividedResults.includes(optionDic[optionValue].storyNumber));
+                                if (dividedResultsIndex < menuItemFilterResultClasses.length) {
+                                    optionDic[optionValue].dom.classList.add(menuItemFilterResultClasses[dividedResultsIndex]);
                                 }
                             });
                     }
@@ -698,20 +752,62 @@
                 }
             } else {
                 // Highlight options by filter result by adding menuItemFilterResultClasses
+                // Unique storyNumber in dsc order
                 const filterResults = Object.keys(initialOptionDic)
                     .map(optionValue => initialOptionDic[optionValue].storyNumber)
                     .filter((x, i, self) => self.indexOf(x) === i)
-                    .sort((a, b) => b - a)
-                    .slice(0, menuItemFilterResultClasses.length);
+                    .sort((a, b) => b - a);
 
-                // Add menuItemFilterResultClasses according to order of filterResults
+                // +1 is for options without added class
+                const classesLength = menuItemFilterResultClasses.length + 1;
+                // Generate combinations of fiilterResults which is divided into classesLength groups.
+                const dividedResultsCombinations = (() => {
+                    if (classesLength === 1 || filterResults.length <= classesLength) {
+                        // There is no need to divide fiilterResults.
+                        return [filterResults.map(x => [x])];
+                    } else {
+                        // Generate combinations of divideIndexes.
+                        // Divide filterResults by using divideIndexesCombination.
+                        const divideIndexes = [...Array(filterResults.length - 1).keys()].map(x => x + 1);
+                        return generateCombinations(divideIndexes, classesLength - 1).map(divideIndexesCombination => {
+                            const lastIndex = divideIndexesCombination.length - 1;
+                            const dividedResultsCombination = [filterResults.slice(0, divideIndexesCombination[0])];
+                            for (let i = 0; i < lastIndex; i++) {
+                                dividedResultsCombination.push(
+                                    filterResults.slice(divideIndexesCombination[i], divideIndexesCombination[i + 1])
+                                );
+                            }
+                            dividedResultsCombination.push(filterResults.slice(divideIndexesCombination[lastIndex]));
+                            return dividedResultsCombination;
+                        });
+                    }
+                })();
+
+                // Jenks Natural Breaks.
+                // For each dividedResultsCombination, calculate sum of squared deviations for class means(SDCM).
+                // dividedResultsCombination with minimum SDCM score is the best match.
+                const minIndex = (() => {
+                    if (dividedResultsCombinations.length === 1) {
+                        return 0;
+                    } else {
+                        return dividedResultsCombinations.map(dividedResultsCombination => {
+                            return dividedResultsCombination.map(dividedResults => {
+                                const classMean = dividedResults.reduce((p, x) => p + x) / dividedResults.length;
+                                return dividedResults.map(x => (x - classMean) ** 2).reduce((p, x) => p + x);
+                            }).reduce((p, x) => p + x);
+                        }).reduce((iMin, x, i, self) => x < self[iMin] ? i : iMin, 0);
+                    }
+                })();
+
+                // Add menuItemFilterResultClasses according to dividedResultsCombinations[minIndex]
                 Object.keys(initialOptionDic)
                     .forEach(optionValue => {
-                        const i = filterResults.indexOf(initialOptionDic[optionValue].storyNumber);
-                        if (i !== -1) {
+                        const dividedResultsIndex = dividedResultsCombinations[minIndex]
+                            .findIndex(dividedResults => dividedResults.includes(initialOptionDic[optionValue].storyNumber));
+                        if (dividedResultsIndex < menuItemFilterResultClasses.length) {
                             [...optionTags]
                                 .filter(x => x.value === optionValue)
-                                .forEach(x => x.classList.add(menuItemFilterResultClasses[i]));
+                                .forEach(x => x.classList.add(menuItemFilterResultClasses[dividedResultsIndex]));
                         }
                     });
             }
