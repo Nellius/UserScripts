@@ -74,8 +74,8 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
         //language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre_a: { dataId: 'genre', text: 'Genre A', title: "Genre a filter", mode: 'contain' },
         genre_b: { dataId: 'genre', text: 'Genre B', title: "Genre b filter", mode: 'contain' },
-        chapters_gt: { dataId: 'chapters', text: '< Chapaters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
-        chapters_le: { dataId: 'chapters', text: 'Chapaters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
+        chapters_gt: { dataId: 'chapters', text: '< Chapters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
+        chapters_le: { dataId: 'chapters', text: 'Chapters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
         word_count_le: { dataId: 'word_count', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
         reviews: { dataId: 'reviews', text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
@@ -119,9 +119,41 @@ For example, if you want to single out stories with greater than 200K word count
     const SORT_CHARACTERS_OF_RELATIONSHIP = true;
 ```
 
+### Change color scheme for options
+
+Default colorScheme is red.
+For example, if you want to try existing color scheme, change red to blue or purple.
+
+```javascript
+    // colorScheme setting
+    const colorScheme = blue;
+```
+
+You can make colorScheme manually.
+
+```javascript
+    // colorScheme setting
+    // Format: [['backgroundColor', 'foregroundColor'], . . . ]
+    // green, yellow, red, white
+    const colorScheme = [['#05f005', 'black'], ['#f0f005', 'black'], ['#f00505', 'black'], ['white', 'black']];
+```
+
+You can also make colorScheme gradations automatically by using makeGradualColorScheme function. Change arguments to to suit your preference.
+
+```javascript
+    // colorScheme setting
+    // '#64DD17': start of gradations, 3 or 6 digit hex color
+    // '#F1F8E9': end of gradations, 3 or 6 digit hex color
+    // 4: length of gradations, number
+    // '#555': default foreground color, 3 or 6 digit hex color
+    // If '#555' is unreadable on generated background color,
+    // it change to white or black automatically.
+    const colorScheme = makeGradualColorScheme('#64DD17', '#F1F8E9', 4, '#555');
+```
+
 ## Sorter Setting
 
-### Mangage sorters
+### Manage sorters
 
 ```javascript
     // Sorter Setting
