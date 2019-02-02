@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.951
+// @version      0.952
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -593,16 +593,14 @@
                             } else {
                                 // Generate combinations of divideIndexes.
                                 // Divide filterResults by using divideIndexesCombination.
-                                const divideIndexes = [...Array(filterResults.length - 1).keys()].map(x => x + 1);
-                                return generateCombinations(divideIndexes, classesLength - 1).map(divideIndexesCombination => {
-                                    const lastIndex = divideIndexesCombination.length - 1;
-                                    const dividedResultsCombination = [filterResults.slice(0, divideIndexesCombination[0])];
-                                    for (let i = 0; i < lastIndex; i++) {
-                                        dividedResultsCombination.push(
-                                            filterResults.slice(divideIndexesCombination[i], divideIndexesCombination[i + 1])
-                                        );
-                                    }
-                                    dividedResultsCombination.push(filterResults.slice(divideIndexesCombination[lastIndex]));
+                                const middleIndexes = [...Array(filterResults.length).keys()].slice(1);
+                                return generateCombinations(middleIndexes, classesLength - 1).map(middleIndexesCombination => {
+                                    const divideIndexes = [0, ...middleIndexesCombination, filterResults.length];
+                                    const dividedResultsCombination = [];
+                                    divideIndexes.reduce((p, x) => {
+                                        dividedResultsCombination.push(filterResults.slice(p, x));
+                                        return x;
+                                    });
                                     return dividedResultsCombination;
                                 });
                             }
@@ -777,16 +775,14 @@
                     } else {
                         // Generate combinations of divideIndexes.
                         // Divide filterResults by using divideIndexesCombination.
-                        const divideIndexes = [...Array(filterResults.length - 1).keys()].map(x => x + 1);
-                        return generateCombinations(divideIndexes, classesLength - 1).map(divideIndexesCombination => {
-                            const lastIndex = divideIndexesCombination.length - 1;
-                            const dividedResultsCombination = [filterResults.slice(0, divideIndexesCombination[0])];
-                            for (let i = 0; i < lastIndex; i++) {
-                                dividedResultsCombination.push(
-                                    filterResults.slice(divideIndexesCombination[i], divideIndexesCombination[i + 1])
-                                );
-                            }
-                            dividedResultsCombination.push(filterResults.slice(divideIndexesCombination[lastIndex]));
+                        const middleIndexes = [...Array(filterResults.length).keys()].slice(1);
+                        return generateCombinations(middleIndexes, classesLength - 1).map(middleIndexesCombination => {
+                            const divideIndexes = [0, ...middleIndexesCombination, filterResults.length];
+                            const dividedResultsCombination = [];
+                            divideIndexes.reduce((p, x) => {
+                                dividedResultsCombination.push(filterResults.slice(p, x));
+                                return x;
+                            });
                             return dividedResultsCombination;
                         });
                     }
