@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.952
+// @version      0.953
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -584,17 +584,17 @@
                             .sort((a, b) => b - a);
 
                         // +1 is for options without added class
-                        const classesLength = menuItemFilterResultClasses.length + 1;
-                        // Generate combinations of fiilterResults which is divided into classesLength groups.
+                        const classLength = menuItemFilterResultClasses.length + 1;
+                        // Generate combinations of fiilterResults which is divided into classLength groups.
                         const dividedResultsCombinations = (() => {
-                            if (classesLength === 1 || filterResults.length <= classesLength) {
+                            if (classLength === 1 || filterResults.length <= classLength) {
                                 // There is no need to divide fiilterResults.
                                 return [filterResults.map(x => [x])];
                             } else {
                                 // Generate combinations of divideIndexes.
                                 // Divide filterResults by using divideIndexesCombination.
                                 const middleIndexes = [...Array(filterResults.length).keys()].slice(1);
-                                return generateCombinations(middleIndexes, classesLength - 1).map(middleIndexesCombination => {
+                                return generateCombinations(middleIndexes, classLength - 1).map(middleIndexesCombination => {
                                     const divideIndexes = [0, ...middleIndexesCombination, filterResults.length];
                                     const dividedResultsCombination = [];
                                     divideIndexes.reduce((p, x) => {
@@ -766,17 +766,17 @@
                     .sort((a, b) => b - a);
 
                 // +1 is for options without added class
-                const classesLength = menuItemFilterResultClasses.length + 1;
-                // Generate combinations of fiilterResults which is divided into classesLength groups.
+                const classLength = menuItemFilterResultClasses.length + 1;
+                // Generate combinations of fiilterResults which is divided into classLength groups.
                 const dividedResultsCombinations = (() => {
-                    if (classesLength === 1 || filterResults.length <= classesLength) {
+                    if (classLength === 1 || filterResults.length <= classLength) {
                         // There is no need to divide fiilterResults.
                         return [filterResults.map(x => [x])];
                     } else {
                         // Generate combinations of divideIndexes.
                         // Divide filterResults by using divideIndexesCombination.
                         const middleIndexes = [...Array(filterResults.length).keys()].slice(1);
-                        return generateCombinations(middleIndexes, classesLength - 1).map(middleIndexesCombination => {
+                        return generateCombinations(middleIndexes, classLength - 1).map(middleIndexesCombination => {
                             const divideIndexes = [0, ...middleIndexesCombination, filterResults.length];
                             const dividedResultsCombination = [];
                             divideIndexes.reduce((p, x) => {
