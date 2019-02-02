@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.953
+// @version      0.961
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -39,8 +39,8 @@
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre: { dataId: 'genre', text: 'Genre', title: "Genre filter", mode: 'contain' },
-        chapters_gt: { dataId: 'chapters', text: '< Chapaters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
-        chapters_le: { dataId: 'chapters', text: 'Chapaters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
+        chapters_gt: { dataId: 'chapters', text: '< Chapters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
+        chapters_le: { dataId: 'chapters', text: 'Chapters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
         word_count_le: { dataId: 'word_count', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
         reviews: { dataId: 'reviews', text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
@@ -78,31 +78,115 @@
     // Specify symbols to represent 'asc' and 'dsc'.
     const orderSymbol = { asc: '▲', dsc: '▼' };
 
-    // css
+    // css setting
+    // [[backgroundColor, color]]
+    const red = ['#ff1111', '#f96540', '#f4a26d', '#efcc99', 'white'].map(color => [color, '#555']);
+    // eslint-disable-next-line no-unused-vars
+    const blue = makeGradualColorScheme('#11f', '#fff', 5, '#555');
+    // eslint-disable-next-line no-unused-vars
+    const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 5, '#555');
+
+    // colorScheme setting
+    const colorScheme = red;
+
+    // Generate list of className for colorScheme automatically.
+    const menuItemGroupClasses = ((length) => {
+        let indexes = [...Array(length).keys()].map(x => x.toString());
+        if (length.toString().length > 1) {
+            indexes = indexes.map(x => x.padStart(length.toString().length, '0'));
+        }
+        return indexes.map(index => 'fas-filter-menu-item_group-' + index);
+    })(colorScheme.length);
+
+    // Generate str of colorScheme css automatically.
+    const menuItemGroupCss = menuItemGroupClasses.map((groupClass, i) => {
+        return '.' + groupClass +
+            " { background-color: " + colorScheme[i][0] +
+            "; color: " + colorScheme[i][1] + "; }";
+    });
+
     // eslint-disable-next-line no-undef
     GM_addStyle([
         ".fas-sorter { color: gray; }",
         ".fas-sorter:after { content: attr(data-order); }",
         ".fas-filter-menus { color: gray; font-size: .9em; }",
         ".fas-filter-menu { font-size: 1em; padding: 1px 1px; height: 23px; margin: .1em auto; }",
-        ".fas-filter-execlude-menu { border-color: #777; }",
+        ".fas-filter-exclude-menu { border-color: #777; }",
         ".fas-filter-menu_locked { background-color: #ccc; }",
         ".fas-filter-menu:disabled { border-color: #999; background-color: #999; }",
         ".fas-filter-menu-item { color: #555; }",
         ".fas-filter-menu-item_locked { font-style: oblique; }",
-        ".fas-filter-menu-item_1st-largest-group { background-color: #ff1111; }",
-        ".fas-filter-menu-item_2nd-largest-group { background-color: #f96540; }",
-        ".fas-filter-menu-item_3rd-largest-group { background-color: #f4a26d; }",
-        ".fas-filter-menu-item_4th-largest-group { background-color: #efcc99; }",
+        ...menuItemGroupCss,
         ".fas-filter-menu-item_story-zero { background-color: #999; }"
     ].join(''));
 
-    const menuItemFilterResultClasses = [
-        'fas-filter-menu-item_1st-largest-group',
-        'fas-filter-menu-item_2nd-largest-group',
-        'fas-filter-menu-item_3rd-largest-group',
-        'fas-filter-menu-item_4th-largest-group'
-    ];
+    // css functions
+    // Make gradualColorScheme from startHexColor to endHexColor with gradationsLength steps.
+    // Determine letterColor from [defaultForegroundHexColor, white, black] automatically.
+    function makeGradualColorScheme (startHexColor, endHexColor, gradationsLength, defaultForegroundHexColor) {
+        if (![4, 7].includes(startHexColor.length) || ![4, 7].includes(endHexColor.length)) {
+            console.log(`Error!, args of makeGradualColorScheme, ${startHexColor} or ${endHexColor} is invalid.`);
+            return [];
+        }
+
+        // Convert hex color str into int rgb.
+        const convertToRgb = (hexColor) => {
+            const hexColor6Digit = hexColor.length - 1 === 3
+                ? hexColor[1] + hexColor[1] + hexColor[2] + hexColor[2] + hexColor[3] + hexColor[3]
+                : hexColor.slice(1);
+            return [0, 2, 4]
+                .map(x => hexColor6Digit.slice(x, x + 2))
+                .map(x => parseInt(x, 16));
+        };
+
+        const startRgb = convertToRgb(startHexColor);
+        const endRgb = convertToRgb(endHexColor);
+        const defaultForegroundRgb = convertToRgb(defaultForegroundHexColor);
+
+        // Make rgb gradations
+        const rgbGradation = [0, 1, 2].map(x => (endRgb[x] - startRgb[x]) / (gradationsLength - 1));
+        const rgbGradations = [
+            ...[...Array(gradationsLength - 1).keys()]
+                .map(gradationStep => {
+                    return startRgb
+                        .map((x, i) => x + rgbGradation[i] * gradationStep)
+                        .map(x => Math.round(x));
+                }),
+            endRgb
+        ];
+
+        // Using rgbGradations as backgroundColor, determine foregroundColor
+        // according to difference of brightness between background and foreground.
+        // Make readable pairs of backgroundColor and foregroundColor.
+        const rgbGradualColorSchemes = rgbGradations.map(backgroundRgb => {
+            const readableForegroundRgb = (() => {
+                const yiqFilter = [0.587, 0.299, 0.114];
+                const backgroundBrightness =
+                         backgroundRgb.map((x, i) => x * yiqFilter[i]).reduce((p, x) => p + x);
+                const foregroundRgbs = [defaultForegroundRgb, [0, 0, 0], [255, 255, 255]];
+                const brightDiffs = foregroundRgbs.map(rgb => {
+                    const letterBrightness = rgb.map((x, i) => x * yiqFilter[i]).reduce((p, x) => p + x);
+                    return Math.abs(backgroundBrightness - letterBrightness);
+                });
+                // If brightDiff > 125, foregroundColor is readable on backgroundColor.
+                const foregroundRgbsIndex = brightDiffs[0] > 125
+                    ? 0
+                    : brightDiffs.reduce((iMax, x, i, self) => self[iMax] < x ? i : iMax, 0);
+
+                return foregroundRgbs[foregroundRgbsIndex];
+            })();
+            return [backgroundRgb, readableForegroundRgb];
+        });
+
+        // Convert int rgb into hex color str.
+        const hexGradualColorSchemes = rgbGradualColorSchemes.map(rgbColorScheme => {
+            return rgbColorScheme
+                .map(rgb => rgb.map(x => x.toString(16).padStart(2, '0')))
+                .map(hexColors => '#' + hexColors[0] + hexColors[1] + hexColors[2]);
+        });
+
+        return hexGradualColorSchemes;
+    };
 
     // Main
     // Check standard of filterDic
@@ -120,12 +204,12 @@
                     return keyUpToStandard;
                 }).every(x => x);
 
-            const modeRequirementUpTostandard =
+            const modeRequirementUpToStandard =
                 modesRequireOptions.includes(filterData.mode) ? 'options' in filterData : true;
-            if (!modeRequirementUpTostandard) {
+            if (!modeRequirementUpToStandard) {
                 console.log(`${filterKey} filter: '${filterData.mode}' mode filter requires to specify options.`);
             }
-            return everyKeyUpToStandard && modeRequirementUpTostandard;
+            return everyKeyUpToStandard && modeRequirementUpToStandard;
         }).every(x => x);
     if (!filterDicUpToStandard) {
         console.log("filterDic isn't up to standard.");
@@ -199,7 +283,7 @@
         };
 
         // Make sorters
-        // Remvoe original sorter span
+        // Remove original sorter span
         while (tab.firstElementChild.firstChild) {
             tab.firstElementChild.removeChild(tab.firstElementChild.firstChild);
         }
@@ -495,7 +579,7 @@
 
                     // Add/remove hidden attribute to options.
                     Object.keys(optionDic).forEach(optionValue => {
-                        // usableOptioinValues don't include 'default'.
+                        // usableOptionValues don't include 'default'.
                         const usable = optionValue === 'default' ? true : usableOptionValues.includes(optionValue);
                         optionDic[optionValue].usable = usable;
                         if (!usable) {
@@ -532,17 +616,17 @@
                 .filter(x => storyDic[x].displayFlag)
                 .sort();
 
-            // Add/remove .fas-filter-menu_locked, .fas-filter-menu-item_locked and menuItemFilterResultClasses.
+            // Add/remove .fas-filter-menu_locked, .fas-filter-menu-item_locked and menuItemGroupClasses.
             Object.keys(selectDic)
                 .filter(filterKey => selectDic[filterKey].accessible)
                 .forEach(filterKey => {
                     const optionDic = selectDic[filterKey].optionDic;
 
-                    // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked and menuItemFilterResultClasses.
+                    // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked and menuItemGroupClasses.
                     selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked');
                     Object.keys(optionDic).forEach(x => {
                         optionDic[x].dom.classList.remove(
-                            'fas-filter-menu-item_locked', ...menuItemFilterResultClasses, 'fas-filter-menu-item_story-zero'
+                            'fas-filter-menu-item_locked', ...menuItemGroupClasses, 'fas-filter-menu-item_story-zero'
                         );
                     });
 
@@ -568,12 +652,12 @@
                         // Add .fas-filter-menu_locked to select tag
                         // when every alternatelyFilteredStoryIds are equal to filteredStoryIds.
                         selectDic[filterKey].dom.classList.add('fas-filter-menu_locked');
-                    } else {
-                        // Highlight options by filter result by adding menuItemFilterResultClasses
+                    } else if (menuItemGroupClasses.length) {
+                        // Highlight options by filter result by adding menuItemGroupClasses
 
-                        // Remove menuItemFilterResultClasses
+                        // Remove menuItemGroupClasses
                         Object.keys(optionDic).forEach(optionValue => {
-                            optionDic[optionValue].dom.classList.remove(...menuItemFilterResultClasses);
+                            optionDic[optionValue].dom.classList.remove(...menuItemGroupClasses);
                         });
 
                         // Unique storyNumber in dsc order
@@ -583,18 +667,16 @@
                             .filter((x, i, self) => self.indexOf(x) === i)
                             .sort((a, b) => b - a);
 
-                        // +1 is for options without added class
-                        const classLength = menuItemFilterResultClasses.length + 1;
-                        // Generate combinations of fiilterResults which is divided into classLength groups.
+                        // Generate combinations of filterResults which is divided into menuItemGroupClasses.length groups.
                         const dividedResultsCombinations = (() => {
-                            if (classLength === 1 || filterResults.length <= classLength) {
-                                // There is no need to divide fiilterResults.
+                            if (filterResults.length <= menuItemGroupClasses.length) {
+                                // There is no need to divide filterResults.
                                 return [filterResults.map(x => [x])];
                             } else {
                                 // Generate combinations of divideIndexes.
                                 // Divide filterResults by using divideIndexesCombination.
                                 const middleIndexes = [...Array(filterResults.length).keys()].slice(1);
-                                return generateCombinations(middleIndexes, classLength - 1).map(middleIndexesCombination => {
+                                return generateCombinations(middleIndexes, menuItemGroupClasses.length - 1).map(middleIndexesCombination => {
                                     const divideIndexes = [0, ...middleIndexesCombination, filterResults.length];
                                     const dividedResultsCombination = [];
                                     divideIndexes.reduce((p, x) => {
@@ -622,15 +704,13 @@
                             }
                         })();
 
-                        // Add menuItemFilterResultClasses according to dividedResultsCombinations[minIndex]
+                        // Add menuItemGroupClasses according to dividedResultsCombinations[minIndex]
                         Object.keys(optionDic)
                             .filter(optionValue => optionDic[optionValue].usable)
                             .forEach(optionValue => {
                                 const dividedResultsIndex = dividedResultsCombinations[minIndex]
                                     .findIndex(dividedResults => dividedResults.includes(optionDic[optionValue].storyNumber));
-                                if (dividedResultsIndex < menuItemFilterResultClasses.length) {
-                                    optionDic[optionValue].dom.classList.add(menuItemFilterResultClasses[dividedResultsIndex]);
-                                }
+                                optionDic[optionValue].dom.classList.add(menuItemGroupClasses[dividedResultsIndex]);
                             });
                     }
                 });
@@ -659,7 +739,7 @@
             selectTag.title = filterDic[filterKey].title;
             selectTag.classList.add('fas-filter-menu');
             if (filterDic[filterKey].reverse) {
-                selectTag.classList.add('fas-filter-execlude-menu');
+                selectTag.classList.add('fas-filter-exclude-menu');
             }
 
             // Make optionValues from
@@ -757,26 +837,25 @@
                     // else, add .fas-filter-menu_locked.
                     selectTag.classList.add('fas-filter-menu_locked');
                 }
-            } else {
-                // Highlight options by filter result by adding menuItemFilterResultClasses
+            } else if (menuItemGroupClasses.length) {
+                // Highlight options by filter result by adding menuItemGroupClasses
+
                 // Unique storyNumber in dsc order
                 const filterResults = Object.keys(initialOptionDic)
                     .map(optionValue => initialOptionDic[optionValue].storyNumber)
                     .filter((x, i, self) => self.indexOf(x) === i)
                     .sort((a, b) => b - a);
 
-                // +1 is for options without added class
-                const classLength = menuItemFilterResultClasses.length + 1;
-                // Generate combinations of fiilterResults which is divided into classLength groups.
+                // Generate combinations of filterResults which is divided into menuItemGroupClasses.length groups.
                 const dividedResultsCombinations = (() => {
-                    if (classLength === 1 || filterResults.length <= classLength) {
-                        // There is no need to divide fiilterResults.
+                    if (filterResults.length <= menuItemGroupClasses.length) {
+                        // There is no need to divide filterResults.
                         return [filterResults.map(x => [x])];
                     } else {
                         // Generate combinations of divideIndexes.
                         // Divide filterResults by using divideIndexesCombination.
                         const middleIndexes = [...Array(filterResults.length).keys()].slice(1);
-                        return generateCombinations(middleIndexes, classLength - 1).map(middleIndexesCombination => {
+                        return generateCombinations(middleIndexes, menuItemGroupClasses.length - 1).map(middleIndexesCombination => {
                             const divideIndexes = [0, ...middleIndexesCombination, filterResults.length];
                             const dividedResultsCombination = [];
                             divideIndexes.reduce((p, x) => {
@@ -804,16 +883,14 @@
                     }
                 })();
 
-                // Add menuItemFilterResultClasses according to dividedResultsCombinations[minIndex]
+                // Add menuItemGroupClasses according to dividedResultsCombinations[minIndex]
                 Object.keys(initialOptionDic)
                     .forEach(optionValue => {
                         const dividedResultsIndex = dividedResultsCombinations[minIndex]
                             .findIndex(dividedResults => dividedResults.includes(initialOptionDic[optionValue].storyNumber));
-                        if (dividedResultsIndex < menuItemFilterResultClasses.length) {
-                            [...optionTags]
-                                .filter(x => x.value === optionValue)
-                                .forEach(x => x.classList.add(menuItemFilterResultClasses[dividedResultsIndex]));
-                        }
+                        [...optionTags]
+                            .filter(x => x.value === optionValue)
+                            .forEach(x => x.classList.add(menuItemGroupClasses[dividedResultsIndex]));
                     });
             }
 
@@ -881,7 +958,7 @@
                         const optionDic = selectDic[filterKey].optionDic;
                         Object.keys(optionDic).forEach(optionValue => {
                             optionDic[optionValue].dom.classList.remove(
-                                'fas-filter-menu-item_locked', ...menuItemFilterResultClasses, 'fas-filter-menu-item_story-zero'
+                                'fas-filter-menu-item_locked', ...menuItemGroupClasses, 'fas-filter-menu-item_story-zero'
                             );
                             optionDic[optionValue].dom.removeAttribute('hidden');
 
