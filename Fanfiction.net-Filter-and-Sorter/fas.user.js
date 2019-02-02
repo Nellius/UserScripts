@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.96
+// @version      0.961
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -39,8 +39,8 @@
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre: { dataId: 'genre', text: 'Genre', title: "Genre filter", mode: 'contain' },
-        chapters_gt: { dataId: 'chapters', text: '< Chapaters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
-        chapters_le: { dataId: 'chapters', text: 'Chapaters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
+        chapters_gt: { dataId: 'chapters', text: '< Chapters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
+        chapters_le: { dataId: 'chapters', text: 'Chapters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
         word_count_le: { dataId: 'word_count', text: 'Words ≤', title: "Word count less or equal filter", mode: 'le', options: wordCountOptions },
         reviews: { dataId: 'reviews', text: 'Reviews', title: "Review count greater than or equal filter", mode: 'ge', options: kudoCountOptions },
@@ -85,9 +85,11 @@
     const blue = makeGradualColorScheme('#11f', '#fff', 5, '#555');
     // eslint-disable-next-line no-unused-vars
     const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 5, '#555');
+
+    // colorScheme setting
     const colorScheme = red;
 
-    // Generate list of className for colorScheme automaticaly.
+    // Generate list of className for colorScheme automatically.
     const menuItemGroupClasses = ((length) => {
         let indexes = [...Array(length).keys()].map(x => x.toString());
         if (length.toString().length > 1) {
@@ -96,7 +98,7 @@
         return indexes.map(index => 'fas-filter-menu-item_group-' + index);
     })(colorScheme.length);
 
-    // Generate str of colorScheme css automaticaly.
+    // Generate str of colorScheme css automatically.
     const menuItemGroupCss = menuItemGroupClasses.map((groupClass, i) => {
         return '.' + groupClass +
             " { background-color: " + colorScheme[i][0] +
@@ -109,7 +111,7 @@
         ".fas-sorter:after { content: attr(data-order); }",
         ".fas-filter-menus { color: gray; font-size: .9em; }",
         ".fas-filter-menu { font-size: 1em; padding: 1px 1px; height: 23px; margin: .1em auto; }",
-        ".fas-filter-execlude-menu { border-color: #777; }",
+        ".fas-filter-exclude-menu { border-color: #777; }",
         ".fas-filter-menu_locked { background-color: #ccc; }",
         ".fas-filter-menu:disabled { border-color: #999; background-color: #999; }",
         ".fas-filter-menu-item { color: #555; }",
@@ -153,9 +155,9 @@
             endRgb
         ];
 
-        // Using rgbGradations as backgourndColor, determine foregroundColor
+        // Using rgbGradations as backgroundColor, determine foregroundColor
         // according to difference of brightness between background and foreground.
-        // Make readable pairs of backgroundColor and foregourndColor.
+        // Make readable pairs of backgroundColor and foregroundColor.
         const rgbGradualColorSchemes = rgbGradations.map(backgroundRgb => {
             const readableForegroundRgb = (() => {
                 const yiqFilter = [0.587, 0.299, 0.114];
@@ -202,12 +204,12 @@
                     return keyUpToStandard;
                 }).every(x => x);
 
-            const modeRequirementUpTostandard =
+            const modeRequirementUpToStandard =
                 modesRequireOptions.includes(filterData.mode) ? 'options' in filterData : true;
-            if (!modeRequirementUpTostandard) {
+            if (!modeRequirementUpToStandard) {
                 console.log(`${filterKey} filter: '${filterData.mode}' mode filter requires to specify options.`);
             }
-            return everyKeyUpToStandard && modeRequirementUpTostandard;
+            return everyKeyUpToStandard && modeRequirementUpToStandard;
         }).every(x => x);
     if (!filterDicUpToStandard) {
         console.log("filterDic isn't up to standard.");
@@ -281,7 +283,7 @@
         };
 
         // Make sorters
-        // Remvoe original sorter span
+        // Remove original sorter span
         while (tab.firstElementChild.firstChild) {
             tab.firstElementChild.removeChild(tab.firstElementChild.firstChild);
         }
@@ -577,7 +579,7 @@
 
                     // Add/remove hidden attribute to options.
                     Object.keys(optionDic).forEach(optionValue => {
-                        // usableOptioinValues don't include 'default'.
+                        // usableOptionValues don't include 'default'.
                         const usable = optionValue === 'default' ? true : usableOptionValues.includes(optionValue);
                         optionDic[optionValue].usable = usable;
                         if (!usable) {
@@ -665,10 +667,10 @@
                             .filter((x, i, self) => self.indexOf(x) === i)
                             .sort((a, b) => b - a);
 
-                        // Generate combinations of fiilterResults which is divided into menuItemGroupClasses.length groups.
+                        // Generate combinations of filterResults which is divided into menuItemGroupClasses.length groups.
                         const dividedResultsCombinations = (() => {
                             if (filterResults.length <= menuItemGroupClasses.length) {
-                                // There is no need to divide fiilterResults.
+                                // There is no need to divide filterResults.
                                 return [filterResults.map(x => [x])];
                             } else {
                                 // Generate combinations of divideIndexes.
@@ -737,7 +739,7 @@
             selectTag.title = filterDic[filterKey].title;
             selectTag.classList.add('fas-filter-menu');
             if (filterDic[filterKey].reverse) {
-                selectTag.classList.add('fas-filter-execlude-menu');
+                selectTag.classList.add('fas-filter-exclude-menu');
             }
 
             // Make optionValues from
@@ -844,10 +846,10 @@
                     .filter((x, i, self) => self.indexOf(x) === i)
                     .sort((a, b) => b - a);
 
-                // Generate combinations of fiilterResults which is divided into menuItemGroupClasses.length groups.
+                // Generate combinations of filterResults which is divided into menuItemGroupClasses.length groups.
                 const dividedResultsCombinations = (() => {
                     if (filterResults.length <= menuItemGroupClasses.length) {
-                        // There is no need to divide fiilterResults.
+                        // There is no need to divide filterResults.
                         return [filterResults.map(x => [x])];
                     } else {
                         // Generate combinations of divideIndexes.
