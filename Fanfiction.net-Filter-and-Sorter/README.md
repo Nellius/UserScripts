@@ -106,7 +106,7 @@ For example, if you want to single out stories with greater than 200K word count
     const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K', '200K'];
     // Options for reviews, favs and follows filters.
     // Format: [\d+(K)?] in ascending order
-    const kudoCountOptions = ['0', '10', '50', '100', '200', '400', '600', '800', '1K'];
+    const kudoCountOptions = ['10', '50', '100', '200', '400', '600', '800', '1K'];
     // Options for updated and published filters.
     // Format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
     const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
@@ -138,17 +138,18 @@ You can make colorScheme manually.
     const colorScheme = [['#05f005', 'black'], ['#f0f005', 'black'], ['#f00505', 'black'], ['white', 'black']];
 ```
 
-You can also make colorScheme gradations automatically by using makeGradualColorScheme function. Change arguments to to suit your preference.
+You can also make colorScheme gradations automatically by using makeGradualColorScheme function. Change arguments to suit your preference.
 
 ```javascript
     // colorScheme setting
     // '#64DD17': start of gradations, 3 or 6 digit hex color
     // '#F1F8E9': end of gradations, 3 or 6 digit hex color
+    // 'hsv': color space to make gradations, 'hsv' or 'rgb'
     // 4: length of gradations, number
     // '#555': default foreground color, 3 or 6 digit hex color
     // If '#555' is unreadable on generated background color,
     // it change to white or black automatically.
-    const colorScheme = makeGradualColorScheme('#64DD17', '#F1F8E9', 4, '#555');
+    const colorScheme = makeGradualColorScheme('#64DD17', '#F1F8E9', 'hsv', 4, '#555');
 ```
 
 ## Sorter Setting

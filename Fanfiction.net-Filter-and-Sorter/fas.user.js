@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.961
+// @version      0.97
 // @license      MIT
 // @description  Add filters and additional sorters to author page of Fanfiction.net.
 // @author       Vannius
@@ -82,9 +82,9 @@
     // [[backgroundColor, color]]
     const red = ['#ff1111', '#f96540', '#f4a26d', '#efcc99', 'white'].map(color => [color, '#555']);
     // eslint-disable-next-line no-unused-vars
-    const blue = makeGradualColorScheme('#11f', '#fff', 5, '#555');
+    const blue = makeGradualColorScheme('#11f', '#fff', 'rgb', 5, '#555');
     // eslint-disable-next-line no-unused-vars
-    const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 5, '#555');
+    const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 'hsv', 5, '#555');
 
     // colorScheme setting
     const colorScheme = red;
@@ -121,16 +121,21 @@
     ].join(''));
 
     // css functions
-    // Make gradualColorScheme from startHexColor to endHexColor with gradationsLength steps.
-    // Determine letterColor from [defaultForegroundHexColor, white, black] automatically.
-    function makeGradualColorScheme (startHexColor, endHexColor, gradationsLength, defaultForegroundHexColor) {
+    // Make graduation of backgournd color from startHexColor to endHexColor with gradationsLength steps
+    // by using colorSpace('rgb' or 'hsv').
+    // Determine readable letterColor from [defaultForegroundHexColor, white, black] automatically.
+    function makeGradualColorScheme (startHexColor, endHexColor, colorSpace, gradationsLength, defaultForegroundHexColor) {
         if (![4, 7].includes(startHexColor.length) || ![4, 7].includes(endHexColor.length)) {
             console.log(`Error!, args of makeGradualColorScheme, ${startHexColor} or ${endHexColor} is invalid.`);
             return [];
         }
+        if (!['rgb', 'hsv'].includes(colorSpace)) {
+            console.log(`Error!, args of makeGradualColorScheme, ${colorSpace} is invalid.`);
+            return [];
+        }
 
-        // Convert hex color str into int rgb.
-        const convertToRgb = (hexColor) => {
+        // Convert Functions
+        const hexColorToRgb = (hexColor) => {
             const hexColor6Digit = hexColor.length - 1 === 3
                 ? hexColor[1] + hexColor[1] + hexColor[2] + hexColor[2] + hexColor[3] + hexColor[3]
                 : hexColor.slice(1);
@@ -139,21 +144,86 @@
                 .map(x => parseInt(x, 16));
         };
 
-        const startRgb = convertToRgb(startHexColor);
-        const endRgb = convertToRgb(endHexColor);
-        const defaultForegroundRgb = convertToRgb(defaultForegroundHexColor);
+        const rgbToHexColor = (rgb) => {
+            return rgb
+                .map(x => x.toString(16).padStart(2, '0'))
+                .reduce((p, x) => p + x, '#');
+        };
 
-        // Make rgb gradations
-        const rgbGradation = [0, 1, 2].map(x => (endRgb[x] - startRgb[x]) / (gradationsLength - 1));
-        const rgbGradations = [
-            ...[...Array(gradationsLength - 1).keys()]
-                .map(gradationStep => {
-                    return startRgb
-                        .map((x, i) => x + rgbGradation[i] * gradationStep)
-                        .map(x => Math.round(x));
-                }),
-            endRgb
-        ];
+        const rgbToHsv = (rgb) => {
+            const [r, g, b] = rgb.map(x => x / 255);
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const diff = max - min;
+
+            const h = (() => {
+                if (max !== min) {
+                    if (max === r) {
+                        return (60 * ((g - b) / diff) + 360) % 360;
+                    } else if (max === g) {
+                        return (60 * ((b - r) / diff) + 120) % 360;
+                    } else if (max === b) {
+                        return (60 * ((r - g) / diff) + 240) % 360;
+                    }
+                }
+                return 0;
+            })();
+            const s = max === 0 ? 0 : diff / max * 100;
+            const v = max * 100;
+
+            return [h, s, v].map(x => Math.round(x));
+        };
+
+        const hsvToRgb = (hsv) => {
+            const [h, s, v] = [hsv[0], hsv[1] / 100, hsv[2] / 100];
+            const f = (n, k = (n + h / 60) % 6) => {
+                return v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+            };
+            return [f(5), f(3), f(1)].map(x => Math.round(x * 255));
+        };
+
+        // Convert hex color str into int rgb array.
+        const startRgb = hexColorToRgb(startHexColor);
+        const endRgb = hexColorToRgb(endHexColor);
+        const defaultForegroundRgb = hexColorToRgb(defaultForegroundHexColor);
+
+        // Make rgb arrays of gradations made in rgb or hsv color space.
+        const rgbGradations = (() => {
+            if (colorSpace === 'rgb') {
+                // Make rgb gradations
+                const rgbGradation = [0, 1, 2].map(x => (endRgb[x] - startRgb[x]) / (gradationsLength - 1));
+                const rgbMiddleGradationsByRgb = [...Array(gradationsLength - 1).keys()]
+                    .slice(1)
+                    .map(gradationStep => {
+                        return startRgb
+                            .map((x, i) => x + rgbGradation[i] * gradationStep)
+                            .map(x => Math.round(x));
+                    });
+                return [startRgb, ...rgbMiddleGradationsByRgb, endRgb];
+            } else if (colorSpace === 'hsv') {
+                // Convert rgb into hsv
+                const startHsv = rgbToHsv(startRgb);
+                const endHsv = rgbToHsv(endRgb);
+
+                // Make hsv gradations
+                const hsvGradation = (() => {
+                    const hd = endHsv[0] - startHsv[0];
+                    const minHd = Math.abs(hd) < Math.abs(hd - 360) ? hd : hd - 360;
+                    const sd = endHsv[1] - startHsv[1];
+                    const vd = endHsv[2] - startHsv[2];
+                    return [minHd, sd, vd].map(x => x / (gradationsLength - 1));
+                })();
+                const rgbMiddleGradationsByHsv = [...Array(gradationsLength - 1).keys()]
+                    .slice(1)
+                    .map(gradationStep => {
+                        const h = (startHsv[0] + hsvGradation[0] * gradationStep + 360) % 360;
+                        const s = startHsv[1] + hsvGradation[1] * gradationStep;
+                        const v = startHsv[2] + hsvGradation[2] * gradationStep;
+                        return [h, s, v].map(x => Math.round(x));
+                    }).map(x => hsvToRgb(x));
+                return [startRgb, ...rgbMiddleGradationsByHsv, endRgb];
+            }
+        })();
 
         // Using rgbGradations as backgroundColor, determine foregroundColor
         // according to difference of brightness between background and foreground.
@@ -168,8 +238,8 @@
                     const letterBrightness = rgb.map((x, i) => x * yiqFilter[i]).reduce((p, x) => p + x);
                     return Math.abs(backgroundBrightness - letterBrightness);
                 });
-                // If brightDiff > 125, foregroundColor is readable on backgroundColor.
-                const foregroundRgbsIndex = brightDiffs[0] > 125
+                // If brightDiff > 123, foregroundColor is readable on backgroundColor.
+                const foregroundRgbsIndex = brightDiffs[0] > 123
                     ? 0
                     : brightDiffs.reduce((iMax, x, i, self) => self[iMax] < x ? i : iMax, 0);
 
@@ -178,12 +248,11 @@
             return [backgroundRgb, readableForegroundRgb];
         });
 
-        // Convert int rgb into hex color str.
-        const hexGradualColorSchemes = rgbGradualColorSchemes.map(rgbColorScheme => {
-            return rgbColorScheme
-                .map(rgb => rgb.map(x => x.toString(16).padStart(2, '0')))
-                .map(hexColors => '#' + hexColors[0] + hexColors[1] + hexColors[2]);
-        });
+        // Convert int rgb array into hex color str.
+        const hexGradualColorSchemes = rgbGradualColorSchemes
+            .map(rgbColorScheme => {
+                return rgbColorScheme.map(rgb => rgbToHexColor(rgb));
+            });
 
         return hexGradualColorSchemes;
     };
