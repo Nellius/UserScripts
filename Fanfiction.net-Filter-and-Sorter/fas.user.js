@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      0.97
+// @version      1.0
 // @license      MIT
-// @description  Add filters and additional sorters to author page of Fanfiction.net.
+// @description  Add filters and additional sorters to author page and community page of Fanfiction.net.
 // @author       Vannius
 // @match        https://www.fanfiction.net/u/*
+// @match        https://www.fanfiction.net/community/*
 // @grant        GM_addStyle
 // ==/UserScript==
 
@@ -107,6 +108,10 @@
 
     // eslint-disable-next-line no-undef
     GM_addStyle([
+        ".fas-badge { color: #555; padding-top: 8px; padding-bottom: 8px; }",
+        ".fas-badge-number { color: #fff; background-color: #999; padding-right: 9px; padding-left: 9px; border-radius: 9px }",
+        ".fas-badge-number:hover { background-color: #555;}",
+        ".fas-sorter-div { color: gray; font-size: .9em; }",
         ".fas-sorter { color: gray; }",
         ".fas-sorter:after { content: attr(data-order); }",
         ".fas-filter-menus { color: gray; font-size: .9em; }",
@@ -285,7 +290,47 @@
         return;
     }
 
-    for (let tabId of ['st', 'fs']) {
+    // Restructure elements of community page.
+    if (/www\.fanfiction\.net\/community\//.test(window.location.href)) {
+        const newTab = document.createElement('div');
+        newTab.id = 'cs';
+
+        // Store zListTags to newTabInside
+        const newTabInside = document.createElement('div');
+        newTabInside.id = 'cs_inside';
+
+        const zListTags = document.getElementsByClassName('z-list');
+        [...zListTags].forEach(x => {
+            newTabInside.appendChild(x);
+        });
+        newTab.appendChild(document.createElement('br'));
+        newTab.appendChild(newTabInside);
+
+        const scriptTag = document.querySelector('#content_wrapper_inner script');
+        scriptTag.parentElement.insertBefore(newTab, scriptTag);
+
+        // Make cs badge which show number of stories and page information
+        const badge = document.createElement('div');
+        badge.id = 'l_' + newTab.id;
+        badge.align = 'center';
+        badge.classList.add('fas-badge');
+
+        const badgeSpan = document.createElement('span');
+        badgeSpan.classList.add('fas-badge-number');
+        badgeSpan.textContent = document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+        badge.appendChild(document.createTextNode('Community Stories: '));
+        badge.appendChild(badgeSpan);
+        badge.appendChild(document.createTextNode(' / '));
+
+        const pager = document.querySelector('#content_wrapper_inner center');
+        pager.childNodes.forEach(x => {
+            badge.appendChild(x.cloneNode(true));
+        });
+
+        scriptTag.parentElement.insertBefore(badge, newTab);
+    }
+
+    for (let tabId of ['st', 'fs', 'cs']) {
         // Initiation
         const tab = document.getElementById(tabId);
         const tabInside = document.getElementById(tabId + '_inside');
@@ -294,6 +339,89 @@
         const moreThanOneStories = tabInside && tabInside.getElementsByClassName('z-list').length >= 2;
         if (!moreThanOneStories) {
             continue;
+        }
+
+        // Data-set initiation
+        const zListTags = tabInside.getElementsByClassName('z-list');
+        [...zListTags].forEach(x => {
+            // .filter_placeholder don't have children.
+            // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
+            if (x.firstElementChild) {
+                const zPadtop2Tag = x.getElementsByClassName('z-padtop2')[0];
+                const rawText = zPadtop2Tag.textContent;
+                const dataText = rawText.replace(/ - Complete$/, '');
+                const matches =
+                    dataText.match(/^(Crossover - )?(.+) - Rated: ([^ ]+) - ([^ ]+)( - [^ ]+)? - Chapters: (\d+) - Words: ([\d,]+)( - Reviews: [\d,]+)?( - Favs: [\d,]+)?( - Follows: [\d,]+)? ?(- Updated: [^-]+)?(- Published: [^-]+)?(- .*)?$/);
+
+                // These dataset are defined in author page.
+                if (!x.dataset.story_id) {
+                    const url = new URL(x.firstElementChild.href);
+                    x.dataset.storyid = url.pathname.split('/')[2];
+                    x.dataset.title = x.firstElementChild.textContent;
+                    x.dataset.category = matches[2];
+                    x.dataset.chapters = matches[6].replace(/[^\d]/g, '');
+                    x.dataset.wordcount = matches[7].replace(/[^\d]/g, '');
+                    x.dataset.ratingtimes = matches[8] ? matches[8].replace(/[^\d]/g, '') : 0;
+                    const xutimes = zPadtop2Tag.getElementsByTagName('span');
+                    x.dataset.datesubmit = xutimes[0].dataset.xutime;
+                    x.dataset.dateupdate = xutimes.length === 2 ? xutimes[1].dataset.xutime : x.dataset.datesubmit;
+                    x.dataset.statusid = / - Complete$/.test(rawText) ? 2 : 1;
+                }
+
+                // Set following dataset for makeStoryData.
+                x.dataset.crossover = Boolean(matches[1]);
+                x.dataset.rating = matches[3];
+                x.dataset.language = matches[4];
+                x.dataset.favtimes = matches[9] ? matches[9].replace(/[^\d]/g, '') : 0;
+                x.dataset.followtimes = matches[10] ? matches[10].replace(/[^\d]/g, '') : 0;
+
+                const genreList = [
+                    'Adventure', 'Angst', 'Crime', 'Drama', 'Family', 'Fantasy',
+                    'Friendship', 'General', 'Horror', 'Humor', 'Hurt/Comfort',
+                    'Mystery', 'Parody', 'Poetry', 'Romance', 'Sci-Fi', 'Spiritual',
+                    'Supernatural', 'Suspense', 'Tragedy', 'Western'
+                ];
+                x.dataset.genre = matches[5]
+                    ? genreList.filter(genre => matches[5].includes(genre)) : '';
+
+                x.dataset.character = '';
+                x.dataset.relationship = '';
+                if (matches[13]) {
+                    const bracketMatches = matches[13].match(/\[[^\]]+\]/g);
+                    if (bracketMatches) {
+                        const relationship = [];
+                        for (let bracketMatch of bracketMatches) {
+                            // [foo, bar] => [bar, foo]
+                            if (SORT_CHARACTERS_OF_RELATIONSHIP) {
+                                const sortedCharacters = bracketMatch
+                                    .split(/\[|\]|, /)
+                                    .map(x => x.trim())
+                                    .filter(x => x)
+                                    .sort()
+                                    .join(', ');
+                                relationship.push('[' + sortedCharacters + ']');
+                            // [foo, bar] => [foo, bar]
+                            } else {
+                                relationship.push(bracketMatch);
+                            }
+                        }
+                        if (relationship.length) {
+                            x.dataset.relationship = relationship;
+                        }
+                    }
+                    x.dataset.character =
+                        matches[13].slice(2).split(/\[|\]|, /).map(x => x.trim()).filter(x => x);
+                }
+            }
+        });
+
+        // Set storyid to .filter_placeholder tags.
+        // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
+        for (let i = 0; i < zListTags.length - 1; i++) {
+            if (!zListTags[i].dataset.storyid && zListTags[i + 1].dataset.storyid) {
+                zListTags[i].dataset.storyid = zListTags[i + 1].dataset.storyid;
+                i++;
+            }
         }
 
         // Sorter functions
@@ -352,9 +480,11 @@
         };
 
         // Make sorters
-        // Remove original sorter span
-        while (tab.firstElementChild.firstChild) {
-            tab.firstElementChild.removeChild(tab.firstElementChild.firstChild);
+        // Remove original sorter span in author page.
+        if (['st', 'fs'].includes(tabId)) {
+            while (tab.firstElementChild.firstChild) {
+                tab.firstElementChild.removeChild(tab.firstElementChild.firstChild);
+            }
         }
 
         // Append sorters
@@ -365,81 +495,43 @@
             fragment.appendChild(sorterSpan);
             fragment.appendChild(document.createTextNode(' . '));
         });
-        tab.firstElementChild.appendChild(fragment);
+        if (['st', 'fs'].includes(tabId)) {
+            tab.firstElementChild.appendChild(fragment);
+        } else if (tabId === 'cs') {
+            const sorterTag = document.createElement('div');
+            sorterTag.classList.add('fas-sorter-div');
+            sorterTag.appendChild(fragment);
+            tab.insertBefore(sorterTag, tab.firstElementChild);
+        }
 
         // Filter functions
         // Make story data from .zList tag.
         const makeStoryData = (zList) => {
             const storyData = {};
-            storyData.title = zList.dataset.title;
-            storyData.fandom = zList.dataset.category;
             storyData.story_id = parseInt(zList.dataset.storyid);
-            storyData.published = parseInt(zList.dataset.datesubmit);
-            storyData.updated = parseInt(zList.dataset.dateupdate);
-            storyData.reviews = parseInt(zList.dataset.ratingtimes);
-            storyData.chapters = parseInt(zList.dataset.chapters);
-            storyData.word_count = parseInt(zList.dataset.wordcount);
-            storyData.status = parseInt(zList.dataset.statusid) === 1 ? 'In-Progress' : 'Complete';
 
-            // .zList.filter_placeholder tag doesn't have .z-padtop2 tag.
+            // .zList.filter_placeholder tag have only dataset.storyid.
             // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
-            const zPadtop2Tags = zList.getElementsByClassName('z-padtop2');
-            if (zPadtop2Tags.length) {
-                const dataText = zPadtop2Tags[0].textContent;
-                let frontText = /^(.+) - Chapter/.exec(dataText)[1];
-                storyData.crossover = /^Crossover - /.test(frontText) ? 'Crossover' : 'Not Crossover';
-                const rateExec = /^.+ - Rated: ([^ ]+) - (.+)/.exec(frontText);
-                storyData.rating = rateExec[1];
-                frontText = rateExec[2];
-
-                const languageGenre = frontText.split(' - ');
-                storyData.language = languageGenre[0];
-                storyData.genre = [];
-                if (languageGenre.length > 1) {
-                    const genreList = [
-                        'Adventure', 'Angst', 'Crime', 'Drama', 'Family', 'Fantasy',
-                        'Friendship', 'General', 'Horror', 'Humor', 'Hurt/Comfort',
-                        'Mystery', 'Parody', 'Poetry', 'Romance', 'Sci-Fi', 'Spiritual',
-                        'Supernatural', 'Suspense', 'Tragedy', 'Western'
-                    ];
-
-                    for (let genre of genreList) {
-                        if (languageGenre[1].includes(genre)) {
-                            storyData.genre.push(genre);
-                        }
-                    }
-                }
-
-                const favExec = / - Favs: ([\d,]+) - .+$/.exec(dataText);
-                storyData.favs = favExec ? parseInt(favExec[1].replace(/,/g, '')) : 0;
-                const followExec = / - Follows: ([\d,]+) - .+$/.exec(dataText);
-                storyData.follows = followExec ? parseInt(followExec[1].replace(/,/g, '')) : 0;
-
-                storyData.character = [];
-                storyData.relationship = [];
-                const characterExec = /Published: [^-]+ - (.+)$/.exec(dataText.replace(/ - Complete$/, ''));
-                if (characterExec) {
-                    const bracketMatches = characterExec[1].match(/\[[^\]]+\]/g);
-                    if (bracketMatches) {
-                        for (let bracketMatch of bracketMatches) {
-                            // [foo, bar] => [bar, foo]
-                            if (SORT_CHARACTERS_OF_RELATIONSHIP) {
-                                const sortedCharacters = bracketMatch
-                                    .split(/\[|\]|, /)
-                                    .map(x => x.trim())
-                                    .filter(x => x)
-                                    .sort()
-                                    .join(', ');
-                                storyData.relationship.push('[' + sortedCharacters + ']');
-                            // [foo, bar] => [foo, bar]
-                            } else {
-                                storyData.relationship.push(bracketMatch);
-                            }
-                        }
-                    }
-                    storyData.character = characterExec[1]
-                        .split(/\[|\]|, /).map(x => x.trim()).filter(x => x);
-                }
+            if (zList.dataset.title) {
+                storyData.title = zList.dataset.title;
+                storyData.crossover = zList.dataset.crossover ? 'Crossover' : 'Not Crossover';
+                storyData.fandom = zList.dataset.category;
+                storyData.rating = zList.dataset.rating;
+                storyData.language = zList.dataset.language;
+                storyData.genre = zList.dataset.genre
+                    ? zList.dataset.genre.split(',') : [];
+                storyData.chapters = parseInt(zList.dataset.chapters);
+                storyData.word_count = parseInt(zList.dataset.wordcount);
+                storyData.reviews = parseInt(zList.dataset.ratingtimes);
+                storyData.favs = parseInt(zList.dataset.favtimes);
+                storyData.follows = parseInt(zList.dataset.followtimes);
+                storyData.published = parseInt(zList.dataset.datesubmit);
+                storyData.updated = parseInt(zList.dataset.dateupdate);
+                storyData.character = zList.dataset.character
+                    ? zList.dataset.character.split(',') : [];
+                storyData.relationship = zList.dataset.relationship
+                    ? zList.dataset.relationship.match(/\[[^\]]+\]/g) : [];
+                storyData.status = parseInt(zList.dataset.statusid) === 1 ? 'In-Progress' : 'Complete';
             }
             return storyData;
         };
