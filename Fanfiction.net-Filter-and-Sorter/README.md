@@ -2,7 +2,7 @@
 
 ## Description
 
-Add filters and additional sorters to author page of Fanfiction.net.
+Add filters and additional sorters to author page and community page of Fanfiction.net.
 
 [\[Install\]](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Source\]](https://github.com/Nellius/UserScripts/blob/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Greasy Fork\]](https://greasyfork.org/ja/scripts/377000-fanfiction-net-filter-and-sorter)
 
@@ -50,7 +50,7 @@ For example, if you want second 'Genre' filter, add new genre filter property wi
 
 Default filter is an include filter.
 You can make an exclude filter by adding `reverse: true` to property in filterDic.
-For example, if you want 'Exclude Updated' filter, add new updated filter with uniquer key to filterDic, and add `reverse: true` to new updated filter.
+For example, if you want 'Exclude Updated' filter, add new updated filter with unique key to filterDic, and add `reverse: true` to new updated filter.
 
 #### Disable filters
 
@@ -116,12 +116,14 @@ For example, if you want to single out stories with greater than 200K word count
 
 ```javascript
     // Whether or not to sort characters of relationship in ascending order
+    // true:  [foo, bar] => [bar, foo]
+    // false: [foo, bar] => [foo, bar]
     const SORT_CHARACTERS_OF_RELATIONSHIP = true;
 ```
 
 ### Change color scheme for options
 
-Default colorScheme is red.
+Default colorScheme is red. Blue and purple are also prepared.
 For example, if you want to try existing color scheme, change red to blue or purple.
 
 ```javascript
