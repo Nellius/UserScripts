@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.0
+// @version      1.01
 // @license      MIT
 // @description  Add filters and additional sorters to author page and community page of Fanfiction.net.
 // @author       Vannius
@@ -322,12 +322,14 @@
         badgeSpan.textContent = document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
         badge.appendChild(document.createTextNode('Community Stories: '));
         badge.appendChild(badgeSpan);
-        badge.appendChild(document.createTextNode(' / '));
 
         const pager = document.querySelector('#content_wrapper_inner center');
-        pager.childNodes.forEach(x => {
-            badge.appendChild(x.cloneNode(true));
-        });
+        if (pager) {
+            badge.appendChild(document.createTextNode(' / '));
+            pager.childNodes.forEach(x => {
+                badge.appendChild(x.cloneNode(true));
+            });
+        }
 
         scriptTag.parentElement.insertBefore(badge, newTab);
     }
