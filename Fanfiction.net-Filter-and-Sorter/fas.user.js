@@ -57,6 +57,8 @@
     };
 
     // Whether or not to sort characters of relationship in ascending order.
+    // true:  [foo, bar] => [bar, foo]
+    // false: [foo, bar] => [foo, bar]
     const SORT_CHARACTERS_OF_RELATIONSHIP = true;
 
     // Sorter Setting
