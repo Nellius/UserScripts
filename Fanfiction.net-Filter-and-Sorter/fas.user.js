@@ -302,6 +302,10 @@
         newTabInside.id = 'cs_inside';
 
         const zListTags = document.getElementsByClassName('z-list');
+        if (!zListTags.length) {
+            return;
+        }
+
         [...zListTags].forEach(x => {
             newTabInside.appendChild(x);
         });
@@ -368,7 +372,8 @@
                     x.dataset.ratingtimes = matches[8] ? matches[8].replace(/[^\d]/g, '') : 0;
                     const xutimes = zPadtop2Tag.getElementsByTagName('span');
                     x.dataset.datesubmit = xutimes[0].dataset.xutime;
-                    x.dataset.dateupdate = xutimes.length === 2 ? xutimes[1].dataset.xutime : x.dataset.datesubmit;
+                    x.dataset.dateupdate = xutimes.length === 2
+                        ? xutimes[1].dataset.xutime : x.dataset.datesubmit;
                     x.dataset.statusid = / - Complete$/.test(rawText) ? 2 : 1;
                 }
 
