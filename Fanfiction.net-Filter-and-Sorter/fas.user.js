@@ -321,7 +321,7 @@
             }
 
             // Set following dataset for makeStoryData.
-            x.dataset.crossover = Boolean(matches[1]);
+            x.dataset.crossover = matches[1] ? 1 : 0;
             x.dataset.rating = matches[3];
             x.dataset.language = matches[4];
             x.dataset.favtimes = matches[9] ? matches[9].replace(/[^\d]/g, '') : 0;
@@ -610,7 +610,7 @@
             // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
             if (zList.dataset.title) {
                 storyData.title = zList.dataset.title;
-                storyData.crossover = zList.dataset.crossover ? 'Crossover' : 'Not Crossover';
+                storyData.crossover = parseInt(zList.dataset.crossover) ? 'Crossover' : 'Not Crossover';
                 storyData.fandom = zList.dataset.category;
                 storyData.rating = zList.dataset.rating;
                 storyData.language = zList.dataset.language;
