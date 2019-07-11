@@ -113,6 +113,8 @@
         ".fas-badge { color: #555; padding-top: 8px; padding-bottom: 8px; }",
         ".fas-badge-number { color: #fff; background-color: #999; padding-right: 9px; padding-left: 9px; border-radius: 9px }",
         ".fas-badge-number:hover { background-color: #555;}",
+        ".fas-progress {  width: 1%; height: 10px; background-color: #4caf50; }",
+        ".fas-progress-bar {  width: 100%; background-color: #ccc;}",
         ".fas-sorter-div { color: gray; font-size: .9em; }",
         ".fas-sorter { color: gray; }",
         ".fas-sorter:after { content: attr(data-order); }",
@@ -415,6 +417,7 @@
             const loadBtn = document.createElement('button');
             loadBtn.appendChild(document.createTextNode("Load all pages "));
             loadBtn.disabled = false;
+            loadBtn.classList.add('fas-load-button');
 
             const currentUrlSplits = window.location.href.split('/');
             const startCurrentUrl = currentUrlSplits.slice(0, 8).join('/');
@@ -440,14 +443,25 @@
                     return parsedDoc.getElementsByClassName('z-list');
                 };
 
+                // Add progress bar
+                const progressBar = document.createElement('div');
+                progressBar.classList.add('fas-progress-bar');
+                const progress = document.createElement('div');
+                progress.classList.add('fas-progress');
+                progress.style.width = 1 / last * 100 + '%';
+
+                progressBar.appendChild(progress);
+                badge.parentElement.insertBefore(progressBar, badge.nextElementSibling);
+
                 // Set Dataset to zListTag
                 const loadedZListTags = [];
-                for (let url of urls) {
-                    const zListTags = await getZListTags(url);
+                for (let i = 0; i < urls.length; i++) {
+                    const zListTags = await getZListTags(urls[i]);
                     [...zListTags].forEach(x => {
                         setDatasetToZListTag(x);
                         loadedZListTags.push(x);
                     });
+                    progress.style.width = (i + 2) / last * 100 + '%';
                 }
 
                 // Set storyid to .filter_placeholder tags.
