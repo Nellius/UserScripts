@@ -130,10 +130,12 @@
     ].join(''));
 
     // css functions
-    // Make graduation of backgournd color from startHexColor to endHexColor with gradationsLength steps
-    // by using colorSpace('rgb' or 'hsv').
+    // Make graduation of backgournd color from startHexColor to endHexColor
+    // with gradationsLength steps by using colorSpace('rgb' or 'hsv').
     // Determine readable letterColor from [defaultForegroundHexColor, white, black] automatically.
-    function makeGradualColorScheme (startHexColor, endHexColor, colorSpace, gradationsLength, defaultForegroundHexColor) {
+    function makeGradualColorScheme (
+        startHexColor, endHexColor, colorSpace, gradationsLength, defaultForegroundHexColor
+    ) {
         if (![4, 7].includes(startHexColor.length) || ![4, 7].includes(endHexColor.length)) {
             console.log(`Error!, args of makeGradualColorScheme, ${startHexColor} or ${endHexColor} is invalid.`);
             return [];
@@ -200,7 +202,8 @@
         const rgbGradations = (() => {
             if (colorSpace === 'rgb') {
                 // Make rgb gradations
-                const rgbGradation = [0, 1, 2].map(x => (endRgb[x] - startRgb[x]) / (gradationsLength - 1));
+                const rgbGradation =
+                    [0, 1, 2].map(x => (endRgb[x] - startRgb[x]) / (gradationsLength - 1));
                 const rgbMiddleGradationsByRgb = [...Array(gradationsLength - 1).keys()]
                     .slice(1)
                     .map(gradationStep => {
@@ -244,7 +247,8 @@
                          backgroundRgb.map((x, i) => x * yiqFilter[i]).reduce((p, x) => p + x);
                 const foregroundRgbs = [defaultForegroundRgb, [0, 0, 0], [255, 255, 255]];
                 const brightDiffs = foregroundRgbs.map(rgb => {
-                    const letterBrightness = rgb.map((x, i) => x * yiqFilter[i]).reduce((p, x) => p + x);
+                    const letterBrightness =
+                        rgb.map((x, i) => x * yiqFilter[i]).reduce((p, x) => p + x);
                     return Math.abs(backgroundBrightness - letterBrightness);
                 });
                 // If brightDiff > 123, foregroundColor is readable on backgroundColor.
@@ -321,7 +325,7 @@
             }
 
             // Set following dataset for makeStoryData.
-            x.dataset.crossover = Boolean(matches[1]);
+            x.dataset.crossover = matches[1] ? 1 : 0;
             x.dataset.rating = matches[3];
             x.dataset.language = matches[4];
             x.dataset.favtimes = matches[9] ? matches[9].replace(/[^\d]/g, '') : 0;
@@ -610,7 +614,8 @@
             // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
             if (zList.dataset.title) {
                 storyData.title = zList.dataset.title;
-                storyData.crossover = zList.dataset.crossover ? 'Crossover' : 'Not Crossover';
+                storyData.crossover =
+                    parseInt(zList.dataset.crossover) ? 'Crossover' : 'Not Crossover';
                 storyData.fandom = zList.dataset.category;
                 storyData.rating = zList.dataset.rating;
                 storyData.language = zList.dataset.language;
@@ -627,7 +632,8 @@
                     ? zList.dataset.character.split(',') : [];
                 storyData.relationship = zList.dataset.relationship
                     ? zList.dataset.relationship.match(/\[[^\]]+\]/g) : [];
-                storyData.status = parseInt(zList.dataset.statusid) === 1 ? 'In-Progress' : 'Complete';
+                storyData.status =
+                    parseInt(zList.dataset.statusid) === 1 ? 'In-Progress' : 'Complete';
             }
             return storyData;
         };
@@ -755,7 +761,8 @@
                 selectDic[filterKey].value = selectDic[filterKey].dom.value;
                 selectDic[filterKey].displayed = selectDic[filterKey].dom.style.display === '';
                 selectDic[filterKey].disabled = selectDic[filterKey].dom.hasAttribute('disabled');
-                selectDic[filterKey].accessible = selectDic[filterKey].displayed && !selectDic[filterKey].disabled;
+                selectDic[filterKey].accessible =
+                    selectDic[filterKey].displayed && !selectDic[filterKey].disabled;
                 selectDic[filterKey].optionDic = {};
                 if (selectDic[filterKey].accessible) {
                     const optionTags = selectTag.getElementsByTagName('option');
@@ -800,7 +807,8 @@
                     // By changing to one of usableOptionValues, display of stories would change.
                     // Excluded options can't change display of stories.
                     const usableOptionValues = (() => {
-                        // Make usableStoryValues from alternately filtered stories by neutralizing each filter.
+                        // Make usableStoryValues from alternately filtered stories
+                        // by neutralizing each filter.
                         const usableStoryValues = Object.keys(storyDic)
                             .filter(x => {
                                 const filterStatus = { ...storyDic[x].filterStatus };
@@ -837,7 +845,8 @@
                     // Add/remove hidden attribute to options.
                     Object.keys(optionDic).forEach(optionValue => {
                         // usableOptionValues don't include 'default'.
-                        const usable = optionValue === 'default' ? true : usableOptionValues.includes(optionValue);
+                        const usable =
+                            optionValue === 'default' ? true : usableOptionValues.includes(optionValue);
                         optionDic[optionValue].usable = usable;
                         if (!usable) {
                             optionDic[optionValue].dom.setAttribute('hidden', '');
@@ -873,17 +882,21 @@
                 .filter(x => storyDic[x].displayFlag)
                 .sort();
 
-            // Add/remove .fas-filter-menu_locked, .fas-filter-menu-item_locked and menuItemGroupClasses.
+            // Add/remove
+            // .fas-filter-menu_locked, .fas-filter-menu-item_locked and menuItemGroupClasses.
             Object.keys(selectDic)
                 .filter(filterKey => selectDic[filterKey].accessible)
                 .forEach(filterKey => {
                     const optionDic = selectDic[filterKey].optionDic;
 
-                    // Remove .fas-filter-menu_locked and .fas-filter-menu-item_locked and menuItemGroupClasses.
+                    // Remove
+                    // .fas-filter-menu_locked and .fas-filter-menu-item_locked and menuItemGroupClasses.
                     selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked');
                     Object.keys(optionDic).forEach(x => {
                         optionDic[x].dom.classList.remove(
-                            'fas-filter-menu-item_locked', ...menuItemGroupClasses, 'fas-filter-menu-item_story-zero'
+                            'fas-filter-menu-item_locked',
+                            ...menuItemGroupClasses,
+                            'fas-filter-menu-item_story-zero'
                         );
                     });
 
@@ -892,13 +905,15 @@
                     const optionsLocked = Object.keys(optionDic)
                         .filter(optionValue => optionDic[optionValue].usable)
                         .map(optionValue => {
-                            const alternatelyFilteredStoryIds = makeAlternatelyFilteredStoryIds(storyDic, optionValue, filterKey);
+                            const alternatelyFilteredStoryIds =
+                                makeAlternatelyFilteredStoryIds(storyDic, optionValue, filterKey);
                             optionDic[optionValue].storyNumber = alternatelyFilteredStoryIds.length;
                             if (filterDic[filterKey].reverse && alternatelyFilteredStoryIds.length === 0) {
                                 optionDic[optionValue].dom.classList.add('fas-filter-menu-item_story-zero');
                             }
 
-                            const idsEqualFlag = JSON.stringify(filteredStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
+                            const idsEqualFlag =
+                                JSON.stringify(filteredStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
                             if (idsEqualFlag) {
                                 optionDic[optionValue].dom.classList.add('fas-filter-menu-item_locked');
                             }
@@ -924,7 +939,8 @@
                             .filter((x, i, self) => self.indexOf(x) === i)
                             .sort((a, b) => b - a);
 
-                        // Generate combinations of filterResults which is divided into menuItemGroupClasses.length groups.
+                        // Generate combinations of filterResults
+                        // which is divided into menuItemGroupClasses.length groups.
                         const dividedResultsCombinations = (() => {
                             if (filterResults.length <= menuItemGroupClasses.length) {
                                 // There is no need to divide filterResults.
@@ -933,20 +949,22 @@
                                 // Generate combinations of divideIndexes.
                                 // Divide filterResults by using divideIndexesCombination.
                                 const middleIndexes = [...Array(filterResults.length).keys()].slice(1);
-                                return generateCombinations(middleIndexes, menuItemGroupClasses.length - 1).map(middleIndexesCombination => {
-                                    const divideIndexes = [0, ...middleIndexesCombination, filterResults.length];
-                                    const dividedResultsCombination = [];
-                                    divideIndexes.reduce((p, x) => {
-                                        dividedResultsCombination.push(filterResults.slice(p, x));
-                                        return x;
+                                return generateCombinations(middleIndexes, menuItemGroupClasses.length - 1)
+                                    .map(middleIndexesCombination => {
+                                        const divideIndexes = [0, ...middleIndexesCombination, filterResults.length];
+                                        const dividedResultsCombination = [];
+                                        divideIndexes.reduce((p, x) => {
+                                            dividedResultsCombination.push(filterResults.slice(p, x));
+                                            return x;
+                                        });
+                                        return dividedResultsCombination;
                                     });
-                                    return dividedResultsCombination;
-                                });
                             }
                         })();
 
                         // Jenks Natural Breaks.
-                        // For each dividedResultsCombination, calculate sum of squared deviations for class means(SDCM).
+                        // For each dividedResultsCombination,
+                        // calculate sum of squared deviations for class means(SDCM).
                         // dividedResultsCombination with minimum SDCM score is the best match.
                         const minIndex = (() => {
                             if (dividedResultsCombinations.length === 1) {
@@ -954,7 +972,8 @@
                             } else {
                                 return dividedResultsCombinations.map(dividedResultsCombination => {
                                     return dividedResultsCombination.map(dividedResults => {
-                                        const classMean = dividedResults.reduce((p, x) => p + x) / dividedResults.length;
+                                        const classMean =
+                                            dividedResults.reduce((p, x) => p + x) / dividedResults.length;
                                         return dividedResults.map(x => (x - classMean) ** 2).reduce((p, x) => p + x);
                                     }).reduce((p, x) => p + x);
                                 }).reduce((iMin, x, i, self) => x < self[iMin] ? i : iMin, 0);
@@ -966,7 +985,9 @@
                             .filter(optionValue => optionDic[optionValue].usable)
                             .forEach(optionValue => {
                                 const dividedResultsIndex = dividedResultsCombinations[minIndex]
-                                    .findIndex(dividedResults => dividedResults.includes(optionDic[optionValue].storyNumber));
+                                    .findIndex(dividedResults =>
+                                        dividedResults.includes(optionDic[optionValue].storyNumber)
+                                    );
                                 optionDic[optionValue].dom.classList.add(menuItemGroupClasses[dividedResultsIndex]);
                             });
                     }
@@ -974,7 +995,8 @@
 
             // Change badge's story number.
             const badge = document.getElementById('l_' + tabId).firstElementChild;
-            const displayedStoryNumber = [...Object.keys(storyDic).filter(x => storyDic[x].displayFlag)].length;
+            const displayedStoryNumber =
+                [...Object.keys(storyDic).filter(x => storyDic[x].displayFlag)].length;
             badge.textContent = displayedStoryNumber;
         };
 
@@ -1031,7 +1053,8 @@
                             }
                         })();
 
-                        // Remove redundant options when filter mode is 'gt', 'ge', 'le', or 'dateRange'
+                        // Remove redundant options
+                        // when filter mode is 'gt', 'ge', 'le', or 'dateRange'
                         const reverse = (filterDic[filterKey].reverse);
                         const sufficientOptionValues = storyValues.map(storyValue => {
                             const throughOptionValues = allOptionValues
