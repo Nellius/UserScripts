@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.01
+// @version      1.2
 // @license      MIT
-// @description  Add filters and additional sorters to author page and community page of Fanfiction.net.
+// @description  Add filters and additional sorters to author page and community page of Fanfiction.net. Add "Load all pages" button to community page.
 // @author       Vannius
 // @match        https://www.fanfiction.net/u/*
 // @match        https://www.fanfiction.net/community/*
@@ -1253,45 +1253,37 @@
                             // Clear each filter
                             selectDic[filterKey].dom.value = 'default';
 
-                            // Revert attributes and class of select tag
-                            // according to initialSelectDic.
-                            selectDic[filterKey].dom.classList.remove(
-                                'fas-filter-menu_locked',
-                                'fas-filter-menu_selected'
-                            );
-                            if (initialSelectDic[filterKey].initialMenuClasses.length > 1) {
-                                selectDic[filterKey].dom.classList
-                                    .add(initialSelectDic[filterKey].initialMenuClasses);
-                            }
+                            // Revert attributes and class of select tag according to initialSelectDic.
+                            selectDic[filterKey].dom.classList
+                                .remove(...selectDic[filterKey].dom.classList);
+                            selectDic[filterKey].dom.classList
+                                .add(...initialSelectDic[filterKey].initialMenuClasses);
 
                             // Revert attributes and class of option tag according to optionDic.
                             const optionDic = selectDic[filterKey].optionDic;
                             Object.keys(optionDic).forEach(optionValue => {
-                                optionDic[optionValue].dom.classList.remove(
-                                    'fas-filter-menu-item_locked',
-                                    ...menuItemGroupClasses,
-                                    'fas-filter-menu-item_story-zero'
-                                );
+                                optionDic[optionValue].dom.classList
+                                    .remove(...optionDic[optionValue].dom.classList);
                                 optionDic[optionValue].dom.removeAttribute('hidden');
 
                                 const initialOptionDic =
                                     initialSelectDic[filterKey].initialOptionDic;
-                                if (initialOptionDic[optionValue].initialItemClasses.length > 1) {
-                                    optionDic[optionValue].dom.classList
-                                        .add(...initialOptionDic[optionValue].initialItemClasses);
-                                }
+                                optionDic[optionValue].dom.classList
+                                    .add(...initialOptionDic[optionValue].initialItemClasses);
                             });
                         });
                 }
 
                 if (changed || allPageLoaded) {
                     // Change display of stories to initial state.
-                    const storyDic = makeStoryDic();
-                    Object.keys(storyDic).forEach(x => changeStoryDisplay(storyDic[x]));
+                    const visibleZListTags = document.querySelectorAll('div.z-list:not(.filtered)');
+                    [...visibleZListTags].forEach(x => {
+                        x.style.display = '';
+                    });
 
                     // Change story number to initial state.
                     const badge = document.getElementById('l_' + tabId).firstElementChild;
-                    badge.textContent = [...Object.keys(storyDic)].length;
+                    badge.textContent = visibleZListTags.length;
                 }
 
                 // When "Load all pages" button is clicked,
