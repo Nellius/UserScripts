@@ -419,7 +419,7 @@
         const aTags = pager ? pager.getElementsByTagName('a') : [];
         if (aTags.length) {
             const loadBtn = document.createElement('button');
-            loadBtn.appendChild(document.createTextNode("Load all pages "));
+            loadBtn.appendChild(document.createTextNode("Load all pages"));
             loadBtn.disabled = false;
             loadBtn.classList.add('fas-load-button');
 
