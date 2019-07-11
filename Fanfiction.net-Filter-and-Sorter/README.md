@@ -2,13 +2,19 @@
 
 ## Description
 
-Add filters and additional sorters to author page and community page of Fanfiction.net.
+Add filters and additional sorters to author page and community page of Fanfiction.net. Add "Load all pages" button to community page.
 
 [\[Install\]](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Source\]](https://github.com/Nellius/UserScripts/blob/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Greasy Fork\]](https://greasyfork.org/ja/scripts/377000-fanfiction-net-filter-and-sorter)
 
 ### Demo
 
+#### Author page with filter and sorter
+
 ![demo](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/images/fas-demo.gif)
+
+#### Community page with filter, sorter and "Load all pages" button
+
+![demo](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/images/fas-load-button-demo.gif)
 
 ### Filters by
 
