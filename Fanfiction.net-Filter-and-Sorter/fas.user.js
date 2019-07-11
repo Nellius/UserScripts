@@ -113,6 +113,8 @@
         ".fas-badge { color: #555; padding-top: 8px; padding-bottom: 8px; }",
         ".fas-badge-number { color: #fff; background-color: #999; padding-right: 9px; padding-left: 9px; border-radius: 9px }",
         ".fas-badge-number:hover { background-color: #555;}",
+        ".fas-progress {  width: 1%; height: 10px; background-color: #4caf50; }",
+        ".fas-progress-bar {  width: 100%; background-color: #ccc;}",
         ".fas-sorter-div { color: gray; font-size: .9em; }",
         ".fas-sorter { color: gray; }",
         ".fas-sorter:after { content: attr(data-order); }",
@@ -292,6 +294,79 @@
         return;
     }
 
+    const setDatasetToZListTag = (x) => {
+        // .filter_placeholder don't have children.
+        // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
+        if (x.firstElementChild) {
+            const zPadtop2Tag = x.getElementsByClassName('z-padtop2')[0];
+            const rawText = zPadtop2Tag.textContent;
+            const dataText = rawText.replace(/ - Complete$/, '');
+            const matches =
+                dataText.match(/^(Crossover - )?(.+) - Rated: ([^ ]+) - ([^ ]+)( - [^ ]+)? - Chapters: (\d+) - Words: ([\d,]+)( - Reviews: [\d,]+)?( - Favs: [\d,]+)?( - Follows: [\d,]+)? ?(- Updated: [^-]+)?(- Published: [^-]+)?(- .*)?$/);
+
+            // These dataset are defined in author page.
+            if (!x.dataset.story_id) {
+                const url = new URL(x.firstElementChild.href);
+                x.dataset.storyid = url.pathname.split('/')[2];
+                x.dataset.title = x.firstElementChild.textContent;
+                x.dataset.category = matches[2];
+                x.dataset.chapters = matches[6].replace(/[^\d]/g, '');
+                x.dataset.wordcount = matches[7].replace(/[^\d]/g, '');
+                x.dataset.ratingtimes = matches[8] ? matches[8].replace(/[^\d]/g, '') : 0;
+                const xutimes = zPadtop2Tag.getElementsByTagName('span');
+                x.dataset.datesubmit = xutimes[0].dataset.xutime;
+                x.dataset.dateupdate = xutimes.length === 2
+                    ? xutimes[1].dataset.xutime : x.dataset.datesubmit;
+                x.dataset.statusid = / - Complete$/.test(rawText) ? 2 : 1;
+            }
+
+            // Set following dataset for makeStoryData.
+            x.dataset.crossover = Boolean(matches[1]);
+            x.dataset.rating = matches[3];
+            x.dataset.language = matches[4];
+            x.dataset.favtimes = matches[9] ? matches[9].replace(/[^\d]/g, '') : 0;
+            x.dataset.followtimes = matches[10] ? matches[10].replace(/[^\d]/g, '') : 0;
+
+            const genreList = [
+                'Adventure', 'Angst', 'Crime', 'Drama', 'Family', 'Fantasy',
+                'Friendship', 'General', 'Horror', 'Humor', 'Hurt/Comfort',
+                'Mystery', 'Parody', 'Poetry', 'Romance', 'Sci-Fi', 'Spiritual',
+                'Supernatural', 'Suspense', 'Tragedy', 'Western'
+            ];
+            x.dataset.genre = matches[5]
+                ? genreList.filter(genre => matches[5].includes(genre)) : '';
+
+            x.dataset.character = '';
+            x.dataset.relationship = '';
+            if (matches[13]) {
+                const bracketMatches = matches[13].match(/\[[^\]]+\]/g);
+                if (bracketMatches) {
+                    const relationship = [];
+                    for (let bracketMatch of bracketMatches) {
+                        // [foo, bar] => [bar, foo]
+                        if (SORT_CHARACTERS_OF_RELATIONSHIP) {
+                            const sortedCharacters = bracketMatch
+                                .split(/\[|\]|, /)
+                                .map(x => x.trim())
+                                .filter(x => x)
+                                .sort()
+                                .join(', ');
+                            relationship.push('[' + sortedCharacters + ']');
+                        // [foo, bar] => [foo, bar]
+                        } else {
+                            relationship.push(bracketMatch);
+                        }
+                    }
+                    if (relationship.length) {
+                        x.dataset.relationship = relationship;
+                    }
+                }
+                x.dataset.character =
+                    matches[13].slice(2).split(/\[|\]|, /).map(x => x.trim()).filter(x => x);
+            }
+        }
+    };
+
     // Restructure elements of community page.
     if (/www\.fanfiction\.net\/community\//.test(window.location.href)) {
         const newTab = document.createElement('div');
@@ -302,6 +377,10 @@
         newTabInside.id = 'cs_inside';
 
         const zListTags = document.getElementsByClassName('z-list');
+        if (!zListTags.length) {
+            return;
+        }
+
         [...zListTags].forEach(x => {
             newTabInside.appendChild(x);
         });
@@ -319,7 +398,8 @@
 
         const badgeSpan = document.createElement('span');
         badgeSpan.classList.add('fas-badge-number');
-        badgeSpan.textContent = document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+        badgeSpan.textContent =
+            document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
         badge.appendChild(document.createTextNode('Community Stories: '));
         badge.appendChild(badgeSpan);
 
@@ -329,6 +409,86 @@
             pager.childNodes.forEach(x => {
                 badge.appendChild(x.cloneNode(true));
             });
+        }
+
+        // When community page has plural pages, add "Load all pages" button
+        const aTags = pager ? pager.getElementsByTagName('a') : [];
+        if (aTags.length) {
+            const loadBtn = document.createElement('button');
+            loadBtn.appendChild(document.createTextNode("Load all pages "));
+            loadBtn.disabled = false;
+            loadBtn.classList.add('fas-load-button');
+
+            const currentUrlSplits = window.location.href.split('/');
+            const startCurrentUrl = currentUrlSplits.slice(0, 8).join('/');
+            const current = parseInt(currentUrlSplits[8]);
+            const endCurrentUrl = currentUrlSplits.slice(9).join('/');
+            const last = [...aTags]
+                .map(x => parseInt(x.href.split('/')[8]))
+                .reduce((p, x) => p > x ? p : x, current);
+            const urls = [...Array(last).keys()]
+                .map(x => x + 1)
+                .filter(x => x !== current)
+                .map(x => [startCurrentUrl, x, endCurrentUrl].join('/'));
+
+            // Add click event
+            loadBtn.addEventListener('click', async () => {
+                // get zListTags from urls
+                const getZListTags = async (url) => {
+                    // eslint-disable-next-line no-undef
+                    const res = await fetch(url);
+                    const text = await res.text();
+                    // eslint-disable-next-line no-undef
+                    const parsedDoc = new DOMParser().parseFromString(text, "text/html");
+                    return parsedDoc.getElementsByClassName('z-list');
+                };
+
+                // Add progress bar
+                const progressBar = document.createElement('div');
+                progressBar.classList.add('fas-progress-bar');
+                const progress = document.createElement('div');
+                progress.classList.add('fas-progress');
+                progress.style.width = 1 / last * 100 + '%';
+
+                progressBar.appendChild(progress);
+                badge.parentElement.insertBefore(progressBar, badge.nextElementSibling);
+
+                // Set Dataset to zListTag
+                const loadedZListTags = [];
+                for (let i = 0; i < urls.length; i++) {
+                    const zListTags = await getZListTags(urls[i]);
+                    [...zListTags].forEach(x => {
+                        setDatasetToZListTag(x);
+                        loadedZListTags.push(x);
+                    });
+                    progress.style.width = (i + 2) / last * 100 + '%';
+                }
+
+                // Set storyid to .filter_placeholder tags.
+                // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
+                for (let i = 0; i < loadedZListTags.length - 1; i++) {
+                    if (!loadedZListTags[i].dataset.storyid && loadedZListTags[i + 1].dataset.storyid) {
+                        loadedZListTags[i].dataset.storyid = loadedZListTags[i + 1].dataset.storyid;
+                        i++;
+                    }
+                }
+
+                // Add loaded zListTags to #cs_inside
+                const csInside = document.getElementById('cs_inside');
+                loadedZListTags.forEach(x => {
+                    csInside.appendChild(x);
+                });
+
+                // Reset filter
+                const clearTag =
+                    document.getElementsByClassName('fas-filter-menus')[0].lastElementChild;
+                clearTag.click();
+
+                loadBtn.disabled = true;
+            });
+
+            badge.appendChild(document.createTextNode(' '));
+            badge.appendChild(loadBtn);
         }
 
         scriptTag.parentElement.insertBefore(badge, newTab);
@@ -348,75 +508,7 @@
         // Data-set initiation
         const zListTags = tabInside.getElementsByClassName('z-list');
         [...zListTags].forEach(x => {
-            // .filter_placeholder don't have children.
-            // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
-            if (x.firstElementChild) {
-                const zPadtop2Tag = x.getElementsByClassName('z-padtop2')[0];
-                const rawText = zPadtop2Tag.textContent;
-                const dataText = rawText.replace(/ - Complete$/, '');
-                const matches =
-                    dataText.match(/^(Crossover - )?(.+) - Rated: ([^ ]+) - ([^ ]+)( - [^ ]+)? - Chapters: (\d+) - Words: ([\d,]+)( - Reviews: [\d,]+)?( - Favs: [\d,]+)?( - Follows: [\d,]+)? ?(- Updated: [^-]+)?(- Published: [^-]+)?(- .*)?$/);
-
-                // These dataset are defined in author page.
-                if (!x.dataset.story_id) {
-                    const url = new URL(x.firstElementChild.href);
-                    x.dataset.storyid = url.pathname.split('/')[2];
-                    x.dataset.title = x.firstElementChild.textContent;
-                    x.dataset.category = matches[2];
-                    x.dataset.chapters = matches[6].replace(/[^\d]/g, '');
-                    x.dataset.wordcount = matches[7].replace(/[^\d]/g, '');
-                    x.dataset.ratingtimes = matches[8] ? matches[8].replace(/[^\d]/g, '') : 0;
-                    const xutimes = zPadtop2Tag.getElementsByTagName('span');
-                    x.dataset.datesubmit = xutimes[0].dataset.xutime;
-                    x.dataset.dateupdate = xutimes.length === 2 ? xutimes[1].dataset.xutime : x.dataset.datesubmit;
-                    x.dataset.statusid = / - Complete$/.test(rawText) ? 2 : 1;
-                }
-
-                // Set following dataset for makeStoryData.
-                x.dataset.crossover = Boolean(matches[1]);
-                x.dataset.rating = matches[3];
-                x.dataset.language = matches[4];
-                x.dataset.favtimes = matches[9] ? matches[9].replace(/[^\d]/g, '') : 0;
-                x.dataset.followtimes = matches[10] ? matches[10].replace(/[^\d]/g, '') : 0;
-
-                const genreList = [
-                    'Adventure', 'Angst', 'Crime', 'Drama', 'Family', 'Fantasy',
-                    'Friendship', 'General', 'Horror', 'Humor', 'Hurt/Comfort',
-                    'Mystery', 'Parody', 'Poetry', 'Romance', 'Sci-Fi', 'Spiritual',
-                    'Supernatural', 'Suspense', 'Tragedy', 'Western'
-                ];
-                x.dataset.genre = matches[5]
-                    ? genreList.filter(genre => matches[5].includes(genre)) : '';
-
-                x.dataset.character = '';
-                x.dataset.relationship = '';
-                if (matches[13]) {
-                    const bracketMatches = matches[13].match(/\[[^\]]+\]/g);
-                    if (bracketMatches) {
-                        const relationship = [];
-                        for (let bracketMatch of bracketMatches) {
-                            // [foo, bar] => [bar, foo]
-                            if (SORT_CHARACTERS_OF_RELATIONSHIP) {
-                                const sortedCharacters = bracketMatch
-                                    .split(/\[|\]|, /)
-                                    .map(x => x.trim())
-                                    .filter(x => x)
-                                    .sort()
-                                    .join(', ');
-                                relationship.push('[' + sortedCharacters + ']');
-                            // [foo, bar] => [foo, bar]
-                            } else {
-                                relationship.push(bracketMatch);
-                            }
-                        }
-                        if (relationship.length) {
-                            x.dataset.relationship = relationship;
-                        }
-                    }
-                    x.dataset.character =
-                        matches[13].slice(2).split(/\[|\]|, /).map(x => x.trim()).filter(x => x);
-                }
-            }
+            setDatasetToZListTag(x);
         });
 
         // Set storyid to .filter_placeholder tags.
@@ -886,266 +978,312 @@
             badge.textContent = displayedStoryNumber;
         };
 
-        // Add filters
-        const filterDiv = document.createElement('div');
-        filterDiv.classList.add('fas-filter-menus');
-        filterDiv.appendChild(document.createTextNode('Filter: '));
+        // Add filter Div
+        const addFilterDiv = () => {
+            // Add filters
+            const filterDiv = document.createElement('div');
+            filterDiv.classList.add('fas-filter-menus');
+            filterDiv.appendChild(document.createTextNode('Filter: '));
 
-        // Make initialStoryDic from initial state of stories.
-        const initialStoryDic = makeStoryDic();
-        const initialStoryIds = Object.keys(initialStoryDic).sort();
+            // Make initialStoryDic from initial state of stories.
+            const initialStoryDic = makeStoryDic();
+            const initialStoryIds = Object.keys(initialStoryDic).sort();
 
-        // Log initial attributes and classList for clear feature.
-        const initialSelectDic = {};
+            // Log initial attributes and classList for clear feature.
+            const initialSelectDic = {};
 
-        const makeSelectTag = (filterKey, defaultText) => {
-            const selectTag = document.createElement('select');
-            selectTag.id = tabId + '_' + filterKey + '_select';
-            selectTag.title = filterDic[filterKey].title;
-            selectTag.classList.add('fas-filter-menu');
-            if (filterDic[filterKey].reverse) {
-                selectTag.classList.add('fas-filter-exclude-menu');
-            }
+            const makeSelectTag = (filterKey, defaultText) => {
+                const selectTag = document.createElement('select');
+                selectTag.id = tabId + '_' + filterKey + '_select';
+                selectTag.title = filterDic[filterKey].title;
+                selectTag.classList.add('fas-filter-menu');
+                if (filterDic[filterKey].reverse) {
+                    selectTag.classList.add('fas-filter-exclude-menu');
+                }
 
-            // Make optionValues from
-            // filterKey values of each story, wordCountOptions, kudoCountOptions or dateRangeOptions.
-            const optionValues = (() => {
-                const storyValues = Object.keys(initialStoryDic)
-                    .map(x => initialStoryDic[x][filterKey])
-                    .reduce((p, x) => p.concat(x), [])
-                    .filter((x, i, self) => self.indexOf(x) === i)
-                    .sort();
+                // Make optionValues from filterKey values of
+                // each story, wordCountOptions, kudoCountOptions or dateRangeOptions.
+                const optionValues = (() => {
+                    const storyValues = Object.keys(initialStoryDic)
+                        .map(x => initialStoryDic[x][filterKey])
+                        .reduce((p, x) => p.concat(x), [])
+                        .filter((x, i, self) => self.indexOf(x) === i)
+                        .sort();
 
-                const filterMode = filterDic[filterKey].mode;
-                if (filterKey === 'rating') {
-                    const orderedOptions = ['K', 'K+', 'T', 'M'];
-                    return orderedOptions.filter(x => storyValues.includes(x));
-                } else if (['gt', 'ge', 'le', 'dateRange'].includes(filterMode)) {
-                    const allOptionValues = (() => {
-                        if (filterMode === 'gt') {
-                            return ['0'].concat(filterDic[filterKey].options).map(x => x + ' <');
-                        } else if (filterMode === 'ge') {
-                            return ['0'].concat(filterDic[filterKey].options).map(x => x + ' ≤');
-                        } else if (filterMode === 'le') {
-                            return filterDic[filterKey].options.concat(['∞']).map(x => '≤ ' + x);
-                        } else if (filterMode === 'dateRange') {
-                            return filterDic[filterKey].options.concat(['∞']).map(x => 'With in ' + x);
+                    const filterMode = filterDic[filterKey].mode;
+                    if (filterKey === 'rating') {
+                        const orderedOptions = ['K', 'K+', 'T', 'M'];
+                        return orderedOptions.filter(x => storyValues.includes(x));
+                    } else if (['gt', 'ge', 'le', 'dateRange'].includes(filterMode)) {
+                        const allOptionValues = (() => {
+                            if (filterMode === 'gt') {
+                                return ['0'].concat(filterDic[filterKey].options)
+                                    .map(x => x + ' <');
+                            } else if (filterMode === 'ge') {
+                                return ['0'].concat(filterDic[filterKey].options)
+                                    .map(x => x + ' ≤');
+                            } else if (filterMode === 'le') {
+                                return filterDic[filterKey].options.concat(['∞'])
+                                    .map(x => '≤ ' + x);
+                            } else if (filterMode === 'dateRange') {
+                                return filterDic[filterKey].options.concat(['∞'])
+                                    .map(x => 'With in ' + x);
+                            }
+                        })();
+
+                        // Remove redundant options when filter mode is 'gt', 'ge', 'le', or 'dateRange'
+                        const reverse = (filterDic[filterKey].reverse);
+                        const sufficientOptionValues = storyValues.map(storyValue => {
+                            const throughOptionValues = allOptionValues
+                                .filter(optionValue => {
+                                    const result = throughFilter(storyValue, optionValue, filterKey);
+                                    return reverse ? !result : result;
+                                });
+                            if (filterMode === 'gt' || filterMode === 'ge') {
+                                return throughOptionValues[throughOptionValues.length - 1];
+                            } else if (filterMode === 'le' || filterMode === 'dateRange') {
+                                return throughOptionValues[0];
+                            }
+                        }).filter((x, i, self) => self.indexOf(x) === i);
+
+                        // "return sufficientOptionValues;" would disturb order of options.
+                        return allOptionValues.filter(x => sufficientOptionValues.includes(x));
+                    } else {
+                        return storyValues;
+                    }
+                })();
+
+                initialSelectDic[filterKey] = {};
+                initialSelectDic[filterKey].initialMenuClasses = [];
+                initialSelectDic[filterKey].menuDisabled = false;
+                initialSelectDic[filterKey].initialOptionDic = {};
+                const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
+
+                // Add .fas-filter-menu-item_locked to each option tag
+                // when alternatelyFilteredStoryIds are equal to initialStoryIds.
+                const initialOptionLocked = ['default', ...optionValues].map(optionValue => {
+                    initialOptionDic[optionValue] = {};
+
+                    const option = document.createElement('option');
+                    option.textContent = optionValue === 'default' ? defaultText : optionValue;
+                    option.value = optionValue;
+                    option.classList.add('fas-filter-menu-item');
+
+                    const alternatelyFilteredStoryIds =
+                        makeAlternatelyFilteredStoryIds(initialStoryDic, optionValue, filterKey);
+                    initialOptionDic[optionValue].storyNumber = alternatelyFilteredStoryIds.length;
+                    if (filterDic[filterKey].reverse && alternatelyFilteredStoryIds.length === 0) {
+                        option.classList.add('fas-filter-menu-item_story-zero');
+                    }
+
+                    const idsEqualFlag =
+                        JSON.stringify(initialStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
+                    if (idsEqualFlag) {
+                        option.classList.add('fas-filter-menu-item_locked');
+                    }
+                    selectTag.appendChild(option);
+
+                    return idsEqualFlag;
+                }).every(x => x);
+
+                const optionTags = selectTag.getElementsByTagName('option');
+                if (initialOptionLocked) {
+                    // When every alternatelyFilteredStoryIds are equal to initialStoryIds,
+                    if (optionTags.length === 1) {
+                        // if every story have no filter value, don't display filter.
+                        selectTag.style.display = 'none';
+                    } else if (optionTags.length === 2) {
+                        // if every stories has same value, disable filter.
+                        selectTag.value = optionTags[1].value;
+                        initialSelectDic[filterKey].menuDisabled = true;
+                        selectTag.setAttribute('disabled', '');
+                    } else {
+                        // else, add .fas-filter-menu_locked.
+                        selectTag.classList.add('fas-filter-menu_locked');
+                    }
+                } else if (menuItemGroupClasses.length) {
+                    // Highlight options by filter result by adding menuItemGroupClasses
+
+                    // Unique storyNumber in dsc order
+                    const filterResults = Object.keys(initialOptionDic)
+                        .map(optionValue => initialOptionDic[optionValue].storyNumber)
+                        .filter((x, i, self) => self.indexOf(x) === i)
+                        .sort((a, b) => b - a);
+
+                    // Generate combinations of filterResults
+                    // which is divided into menuItemGroupClasses.length groups.
+                    const dividedResultsCombinations = (() => {
+                        if (filterResults.length <= menuItemGroupClasses.length) {
+                            // There is no need to divide filterResults.
+                            return [filterResults.map(x => [x])];
+                        } else {
+                            // Generate combinations of divideIndexes.
+                            // Divide filterResults by using divideIndexesCombination.
+                            const middleIndexes = [...Array(filterResults.length).keys()].slice(1);
+                            return generateCombinations(middleIndexes, menuItemGroupClasses.length - 1)
+                                .map(middleIndexesCombination => {
+                                    const divideIndexes =
+                                        [0, ...middleIndexesCombination, filterResults.length];
+                                    const dividedResultsCombination = [];
+                                    divideIndexes.reduce((p, x) => {
+                                        dividedResultsCombination.push(filterResults.slice(p, x));
+                                        return x;
+                                    });
+                                    return dividedResultsCombination;
+                                });
                         }
                     })();
 
-                    // Remove redundant options when filter mode is 'gt', 'ge', 'le', or 'dateRange'
-                    const reverse = (filterDic[filterKey].reverse);
-                    const sufficientOptionValues = storyValues.map(storyValue => {
-                        const throughOptionValues = allOptionValues
-                            .filter(optionValue => {
-                                const result = throughFilter(storyValue, optionValue, filterKey);
-                                return reverse ? !result : result;
-                            });
-                        if (filterMode === 'gt' || filterMode === 'ge') {
-                            return throughOptionValues[throughOptionValues.length - 1];
-                        } else if (filterMode === 'le' || filterMode === 'dateRange') {
-                            return throughOptionValues[0];
+                    // Jenks Natural Breaks.
+                    // For each dividedResultsCombination,
+                    // calculate sum of squared deviations for class means(SDCM).
+                    // dividedResultsCombination with minimum SDCM score is the best match.
+                    const minIndex = (() => {
+                        if (dividedResultsCombinations.length === 1) {
+                            return 0;
+                        } else {
+                            return dividedResultsCombinations.map(dividedResultsCombination => {
+                                return dividedResultsCombination.map(dividedResults => {
+                                    const classMean =
+                                        dividedResults.reduce((p, x) => p + x) / dividedResults.length;
+                                    return dividedResults
+                                        .map(x => (x - classMean) ** 2)
+                                        .reduce((p, x) => p + x);
+                                }).reduce((p, x) => p + x);
+                            }).reduce((iMin, x, i, self) => x < self[iMin] ? i : iMin, 0);
                         }
-                    }).filter((x, i, self) => self.indexOf(x) === i);
+                    })();
 
-                    // "return sufficientOptionValues;" would disturb order of options.
-                    return allOptionValues.filter(x => sufficientOptionValues.includes(x));
-                } else {
-                    return storyValues;
-                }
-            })();
-
-            initialSelectDic[filterKey] = {};
-            initialSelectDic[filterKey].initialMenuClasses = [];
-            initialSelectDic[filterKey].menuDisabled = false;
-            initialSelectDic[filterKey].initialOptionDic = {};
-            const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
-
-            // Add .fas-filter-menu-item_locked to each option tag
-            // when alternatelyFilteredStoryIds are equal to initialStoryIds.
-            const initialOptionLocked = ['default', ...optionValues].map(optionValue => {
-                initialOptionDic[optionValue] = {};
-
-                const option = document.createElement('option');
-                option.textContent = optionValue === 'default' ? defaultText : optionValue;
-                option.value = optionValue;
-                option.classList.add('fas-filter-menu-item');
-
-                const alternatelyFilteredStoryIds =
-                    makeAlternatelyFilteredStoryIds(initialStoryDic, optionValue, filterKey);
-                initialOptionDic[optionValue].storyNumber = alternatelyFilteredStoryIds.length;
-                if (filterDic[filterKey].reverse && alternatelyFilteredStoryIds.length === 0) {
-                    option.classList.add('fas-filter-menu-item_story-zero');
-                }
-
-                const idsEqualFlag = JSON.stringify(initialStoryIds) === JSON.stringify(alternatelyFilteredStoryIds);
-                if (idsEqualFlag) {
-                    option.classList.add('fas-filter-menu-item_locked');
-                }
-                selectTag.appendChild(option);
-
-                return idsEqualFlag;
-            }).every(x => x);
-
-            const optionTags = selectTag.getElementsByTagName('option');
-            if (initialOptionLocked) {
-                // When every alternatelyFilteredStoryIds are equal to initialStoryIds,
-                if (optionTags.length === 1) {
-                    // if every story have no filter value, don't display filter.
-                    selectTag.style.display = 'none';
-                } else if (optionTags.length === 2) {
-                    // if every stories has same value, disable filter.
-                    selectTag.value = optionTags[1].value;
-                    initialSelectDic[filterKey].menuDisabled = true;
-                    selectTag.setAttribute('disabled', '');
-                } else {
-                    // else, add .fas-filter-menu_locked.
-                    selectTag.classList.add('fas-filter-menu_locked');
-                }
-            } else if (menuItemGroupClasses.length) {
-                // Highlight options by filter result by adding menuItemGroupClasses
-
-                // Unique storyNumber in dsc order
-                const filterResults = Object.keys(initialOptionDic)
-                    .map(optionValue => initialOptionDic[optionValue].storyNumber)
-                    .filter((x, i, self) => self.indexOf(x) === i)
-                    .sort((a, b) => b - a);
-
-                // Generate combinations of filterResults which is divided into menuItemGroupClasses.length groups.
-                const dividedResultsCombinations = (() => {
-                    if (filterResults.length <= menuItemGroupClasses.length) {
-                        // There is no need to divide filterResults.
-                        return [filterResults.map(x => [x])];
-                    } else {
-                        // Generate combinations of divideIndexes.
-                        // Divide filterResults by using divideIndexesCombination.
-                        const middleIndexes = [...Array(filterResults.length).keys()].slice(1);
-                        return generateCombinations(middleIndexes, menuItemGroupClasses.length - 1).map(middleIndexesCombination => {
-                            const divideIndexes = [0, ...middleIndexesCombination, filterResults.length];
-                            const dividedResultsCombination = [];
-                            divideIndexes.reduce((p, x) => {
-                                dividedResultsCombination.push(filterResults.slice(p, x));
-                                return x;
-                            });
-                            return dividedResultsCombination;
+                    // Add menuItemGroupClasses according to dividedResultsCombinations[minIndex]
+                    Object.keys(initialOptionDic)
+                        .forEach(optionValue => {
+                            const dividedResultsIndex = dividedResultsCombinations[minIndex]
+                                .findIndex(dividedResults => {
+                                    return dividedResults.includes(
+                                        initialOptionDic[optionValue].storyNumber
+                                    );
+                                });
+                            [...optionTags]
+                                .filter(x => x.value === optionValue)
+                                .forEach(x => {
+                                    x.classList.add(menuItemGroupClasses[dividedResultsIndex]);
+                                });
                         });
-                    }
-                })();
+                }
 
-                // Jenks Natural Breaks.
-                // For each dividedResultsCombination, calculate sum of squared deviations for class means(SDCM).
-                // dividedResultsCombination with minimum SDCM score is the best match.
-                const minIndex = (() => {
-                    if (dividedResultsCombinations.length === 1) {
-                        return 0;
-                    } else {
-                        return dividedResultsCombinations.map(dividedResultsCombination => {
-                            return dividedResultsCombination.map(dividedResults => {
-                                const classMean = dividedResults.reduce((p, x) => p + x) / dividedResults.length;
-                                return dividedResults.map(x => (x - classMean) ** 2).reduce((p, x) => p + x);
-                            }).reduce((p, x) => p + x);
-                        }).reduce((iMin, x, i, self) => x < self[iMin] ? i : iMin, 0);
-                    }
-                })();
+                // Log initial classList
+                initialSelectDic[filterKey].initialMenuClasses = [...selectTag.classList];
+                [...optionTags].forEach(optionTag => {
+                    initialOptionDic[optionTag.value].initialItemClasses = [...optionTag.classList];
+                });
 
-                // Add menuItemGroupClasses according to dividedResultsCombinations[minIndex]
-                Object.keys(initialOptionDic)
-                    .forEach(optionValue => {
-                        const dividedResultsIndex = dividedResultsCombinations[minIndex]
-                            .findIndex(dividedResults => dividedResults.includes(initialOptionDic[optionValue].storyNumber));
-                        [...optionTags]
-                            .filter(x => x.value === optionValue)
-                            .forEach(x => x.classList.add(menuItemGroupClasses[dividedResultsIndex]));
-                    });
-            }
+                // Change display of stories by selected filter value.
+                selectTag.addEventListener('change', (e) => {
+                    filterStories(filterKey, selectTag.value);
+                });
+                return selectTag;
+            };
 
-            // Log initial classList
-            initialSelectDic[filterKey].initialMenuClasses = [...selectTag.classList];
-            [...optionTags].forEach(optionTag => {
-                initialOptionDic[optionTag.value].initialItemClasses = [...optionTag.classList];
+            // Add filters
+            Object.keys(filterDic).forEach(filterKey => {
+                const filterTag = makeSelectTag(filterKey, filterDic[filterKey].text);
+                filterDiv.appendChild(filterTag);
+                filterDiv.appendChild(document.createTextNode(' '));
             });
 
-            // Change display of stories by selected filter value.
-            selectTag.addEventListener('change', (e) => {
-                filterStories(filterKey, selectTag.value);
+            // Don't display filter when other filter which uses same dataId is disabled.
+            Object.keys(filterDic)
+                .forEach(filterKey => {
+                    const filterDisabled = Object.keys(filterDic)
+                        .filter(x => x !== filterKey)
+                        .filter(x => filterDic[x].dataId === filterDic[filterKey].dataId)
+                        .filter(x => initialSelectDic[x].menuDisabled);
+
+                    if (filterDisabled.length) {
+                        const selectTag =
+                            filterDiv.querySelector('#' + tabId + '_' + filterKey + '_select');
+                        selectTag.style.display = 'none';
+                    }
+                });
+
+            // Add Clear button:
+            // Clear filter settings and revert attributes and class according to initialSelectDic.
+            // Make new filterDiv when "Load all pages" button is clicked.
+            const clear = document.createElement('span');
+            clear.textContent = 'Clear';
+            clear.title = "Reset filter values to default";
+            clear.className = 'gray';
+            clear.addEventListener('click', (e) => {
+                const selectDic = makeSelectDic();
+                const changed = Object.keys(selectDic)
+                    .filter(filterKey => selectDic[filterKey].accessible)
+                    .map(filterKey => selectDic[filterKey].value !== 'default')
+                    .some(x => x);
+                const zListTags = document.querySelectorAll('div.z-list:not(.filter_placeholder)');
+                const allPageLoaded = zListTags.length !== initialStoryIds.length;
+
+                // Is there a need to run clear feature?
+                if (changed) {
+                    Object.keys(selectDic)
+                        .filter(filterKey => selectDic[filterKey].accessible)
+                        .forEach(filterKey => {
+                            // Clear each filter
+                            selectDic[filterKey].dom.value = 'default';
+
+                            // Revert attributes and class of select tag
+                            // according to initialSelectDic.
+                            selectDic[filterKey].dom.classList.remove(
+                                'fas-filter-menu_locked',
+                                'fas-filter-menu_selected'
+                            );
+                            if (initialSelectDic[filterKey].initialMenuClasses.length > 1) {
+                                selectDic[filterKey].dom.classList
+                                    .add(initialSelectDic[filterKey].initialMenuClasses);
+                            }
+
+                            // Revert attributes and class of option tag according to optionDic.
+                            const optionDic = selectDic[filterKey].optionDic;
+                            Object.keys(optionDic).forEach(optionValue => {
+                                optionDic[optionValue].dom.classList.remove(
+                                    'fas-filter-menu-item_locked',
+                                    ...menuItemGroupClasses,
+                                    'fas-filter-menu-item_story-zero'
+                                );
+                                optionDic[optionValue].dom.removeAttribute('hidden');
+
+                                const initialOptionDic =
+                                    initialSelectDic[filterKey].initialOptionDic;
+                                if (initialOptionDic[optionValue].initialItemClasses.length > 1) {
+                                    optionDic[optionValue].dom.classList
+                                        .add(...initialOptionDic[optionValue].initialItemClasses);
+                                }
+                            });
+                        });
+                }
+
+                if (changed || allPageLoaded) {
+                    // Change display of stories to initial state.
+                    const storyDic = makeStoryDic();
+                    Object.keys(storyDic).forEach(x => changeStoryDisplay(storyDic[x]));
+
+                    // Change story number to initial state.
+                    const badge = document.getElementById('l_' + tabId).firstElementChild;
+                    badge.textContent = [...Object.keys(storyDic)].length;
+                }
+
+                // When "Load all pages" button is clicked,
+                // remove old filterDiv and add new filterDiv.
+                if (allPageLoaded) {
+                    tab.removeChild(tab.firstElementChild);
+                    addFilterDiv();
+                }
             });
-            return selectTag;
+            filterDiv.appendChild(clear);
+
+            // Append filters
+            tab.insertBefore(filterDiv, tab.firstChild);
         };
 
-        // Add filters
-        Object.keys(filterDic).forEach(filterKey => {
-            const filterTag = makeSelectTag(filterKey, filterDic[filterKey].text);
-            filterDiv.appendChild(filterTag);
-            filterDiv.appendChild(document.createTextNode(' '));
-        });
-
-        // Don't display filter when other filter which uses same dataId is disabled.
-        Object.keys(filterDic)
-            .forEach(filterKey => {
-                const filterDisabled = Object.keys(filterDic)
-                    .filter(x => x !== filterKey)
-                    .filter(x => filterDic[x].dataId === filterDic[filterKey].dataId)
-                    .filter(x => initialSelectDic[x].menuDisabled);
-
-                if (filterDisabled.length) {
-                    const selectTag = filterDiv.querySelector('#' + tabId + '_' + filterKey + '_select');
-                    selectTag.style.display = 'none';
-                }
-            });
-
-        // Clear filter settings and revert attributes and class according to initialSelectDic.
-        const clear = document.createElement('span');
-        clear.textContent = 'Clear';
-        clear.title = "Reset filter values to default";
-        clear.className = 'gray';
-        clear.addEventListener('click', (e) => {
-            const selectDic = makeSelectDic();
-            const changed = Object.keys(selectDic)
-                .filter(filterKey => selectDic[filterKey].accessible)
-                .map(filterKey => selectDic[filterKey].value !== 'default')
-                .some(x => x);
-
-            // Is there a need to run clear feature?
-            if (changed) {
-                Object.keys(selectDic)
-                    .filter(filterKey => selectDic[filterKey].accessible)
-                    .forEach(filterKey => {
-                        // Clear each filter
-                        selectDic[filterKey].dom.value = 'default';
-
-                        // Revert attributes and class of select tag according to initialSelectDic.
-                        selectDic[filterKey].dom.classList.remove('fas-filter-menu_locked', 'fas-filter-menu_selected');
-                        if (initialSelectDic[filterKey].initialMenuClasses.length > 1) {
-                            selectDic[filterKey].dom.classList.add(initialSelectDic[filterKey].initialMenuClasses);
-                        }
-
-                        // Revert attributes and class of option tag according to optionDic.
-                        const optionDic = selectDic[filterKey].optionDic;
-                        Object.keys(optionDic).forEach(optionValue => {
-                            optionDic[optionValue].dom.classList.remove(
-                                'fas-filter-menu-item_locked', ...menuItemGroupClasses, 'fas-filter-menu-item_story-zero'
-                            );
-                            optionDic[optionValue].dom.removeAttribute('hidden');
-
-                            const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
-                            if (initialOptionDic[optionValue].initialItemClasses.length > 1) {
-                                optionDic[optionValue].dom.classList.add(...initialOptionDic[optionValue].initialItemClasses);
-                            }
-                        });
-                    });
-
-                // Change display of stories to initial state.
-                const storyDic = makeStoryDic();
-                Object.keys(storyDic).forEach(x => changeStoryDisplay(storyDic[x]));
-
-                // Change story number to initial state.
-                const badge = document.getElementById('l_' + tabId).firstElementChild;
-                badge.textContent = [...Object.keys(storyDic)].length;
-            }
-        });
-        filterDiv.appendChild(clear);
-
-        // Append filters
-        tab.insertBefore(filterDiv, tab.firstChild);
+        addFilterDiv();
     }
 })();
