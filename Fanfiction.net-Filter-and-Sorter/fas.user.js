@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.31
+// @version      1.32
 // @license      MIT
 // @description  Add filters and additional sorters to author, community and search pages of Fanfiction.net. Add "Load all pages" button to community and search pages.
 // @author       Vannius
@@ -1347,7 +1347,7 @@
 
                 if (changed || allPageLoaded) {
                     // Change display of stories to initial state.
-                    const visibleZListTags = document.querySelectorAll('div.z-list:not(.filtered)');
+                    const visibleZListTags = tabInside.querySelectorAll('div.z-list:not(.filtered)');
                     [...visibleZListTags].forEach(x => {
                         x.style.display = '';
                     });
