@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.3
+// @version      1.31
 // @license      MIT
-// @description  Add filters and additional sorters to author page and community page of Fanfiction.net. Add "Load all pages" button to community page.
+// @description  Add filters and additional sorters to author, community and search pages of Fanfiction.net. Add "Load all pages" button to community and search pages.
 // @author       Vannius
 // @match        https://www.fanfiction.net/u/*
 // @match        https://www.fanfiction.net/community/*
@@ -372,23 +372,78 @@
         }
     };
 
-    // Restructure elements of community page.
+    async function loadAllPages () {
+        const badge = document.getElementById('l_' + this.tabId);
+        const btn = badge.getElementsByClassName('fas-load-button')[0];
+        btn.disabled = true;
+
+        // get zListTags from urls
+        const getZListTags = async (url) => {
+            // eslint-disable-next-line no-undef
+            const res = await fetch(url);
+            const text = await res.text();
+            // eslint-disable-next-line no-undef
+            const parsedDoc = new DOMParser().parseFromString(text, "text/html");
+            return parsedDoc.getElementsByClassName('z-list');
+        };
+
+        // Add progress bar
+        const progressBar = document.createElement('div');
+        progressBar.classList.add('fas-progress-bar');
+        const progress = document.createElement('div');
+        progress.classList.add('fas-progress');
+        progress.style.width = 1 / (this.urls.length + 1) * 100 + '%';
+
+        progressBar.appendChild(progress);
+        badge.parentElement.insertBefore(progressBar, badge.nextElementSibling);
+
+        // Set Dataset to zListTag
+        const loadedZListTags = [];
+        for (let i = 0; i < this.urls.length; i++) {
+            const zListTags = await getZListTags(this.urls[i]);
+            [...zListTags].forEach(x => {
+                setDatasetToZListTag(x);
+                loadedZListTags.push(x);
+            });
+            progress.style.width = (i + 2) / (this.urls.length + 1) * 100 + '%';
+        }
+
+        // Set storyid to .filter_placeholder tags.
+        // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
+        for (let i = 0; i < loadedZListTags.length - 1; i++) {
+            if (!loadedZListTags[i].dataset.storyid && loadedZListTags[i + 1].dataset.storyid) {
+                loadedZListTags[i].dataset.storyid = loadedZListTags[i + 1].dataset.storyid;
+                i++;
+            }
+        }
+
+        // Add loaded zListTags to #id + '_inside'
+        const inside = document.getElementById(this.tabId + '_inside');
+        loadedZListTags.forEach(x => {
+            inside.appendChild(x);
+        });
+
+        // Reset filter
+        const clearTag =
+            document.getElementsByClassName('fas-filter-menus')[0].lastElementChild;
+        clearTag.click();
+    };
+
     if (/www\.fanfiction\.net\/community\//.test(window.location.href)) {
-        const newTab = document.createElement('div');
-        newTab.id = 'cs';
-
-        // Store zListTags to newTabInside
-        const newTabInside = document.createElement('div');
-        newTabInside.id = 'cs_inside';
-
+        // Restructure elements of community page.
         const zListTags = document.getElementsByClassName('z-list');
         if (!zListTags.length) {
             return;
         }
 
+        const newTabInside = document.createElement('div');
+        newTabInside.id = 'cs_inside';
         [...zListTags].forEach(x => {
             newTabInside.appendChild(x);
         });
+
+        const newTab = document.createElement('div');
+        newTab.id = 'cs';
         newTab.appendChild(document.createElement('br'));
         newTab.appendChild(newTabInside);
 
@@ -437,61 +492,9 @@
                 .map(x => [startCurrentUrl, x, endCurrentUrl].join('/'));
 
             // Add click event
-            loadBtn.addEventListener('click', async () => {
-                loadBtn.disabled = true;
-
-                // get zListTags from urls
-                const getZListTags = async (url) => {
-                    // eslint-disable-next-line no-undef
-                    const res = await fetch(url);
-                    const text = await res.text();
-                    // eslint-disable-next-line no-undef
-                    const parsedDoc = new DOMParser().parseFromString(text, "text/html");
-                    return parsedDoc.getElementsByClassName('z-list');
-                };
-
-                // Add progress bar
-                const progressBar = document.createElement('div');
-                progressBar.classList.add('fas-progress-bar');
-                const progress = document.createElement('div');
-                progress.classList.add('fas-progress');
-                progress.style.width = 1 / last * 100 + '%';
-
-                progressBar.appendChild(progress);
-                badge.parentElement.insertBefore(progressBar, badge.nextElementSibling);
-
-                // Set Dataset to zListTag
-                const loadedZListTags = [];
-                for (let i = 0; i < urls.length; i++) {
-                    const zListTags = await getZListTags(urls[i]);
-                    [...zListTags].forEach(x => {
-                        setDatasetToZListTag(x);
-                        loadedZListTags.push(x);
-                    });
-                    progress.style.width = (i + 2) / last * 100 + '%';
-                }
-
-                // Set storyid to .filter_placeholder tags.
-                // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
-                for (let i = 0; i < loadedZListTags.length - 1; i++) {
-                    if (!loadedZListTags[i].dataset.storyid && loadedZListTags[i + 1].dataset.storyid) {
-                        loadedZListTags[i].dataset.storyid = loadedZListTags[i + 1].dataset.storyid;
-                        i++;
-                    }
-                }
-
-                // Add loaded zListTags to #cs_inside
-                const csInside = document.getElementById('cs_inside');
-                loadedZListTags.forEach(x => {
-                    csInside.appendChild(x);
-                });
-
-                // Reset filter
-                const clearTag =
-                    document.getElementsByClassName('fas-filter-menus')[0].lastElementChild;
-                clearTag.click();
+            loadBtn.addEventListener('click', {
+                urls: urls, tabId: 'cs', handleEvent: loadAllPages
             });
-
             badge.appendChild(document.createTextNode(' '));
             badge.appendChild(loadBtn);
         }
@@ -518,7 +521,8 @@
         newTab.appendChild(newTabInside);
         divTags[2].parentElement.insertBefore(newTab, divTags[2]);
 
-        // Make ss badge which show number of stories and "Load all pages" button
+        // Reshape center tag to ss badge
+        // which show number of searched stories and "Load all pages" button
         const badge = document.getElementsByTagName('center')[0];
         badge.id = 'l_' + newTab.id;
         badge.classList.add('fas-badge');
@@ -534,6 +538,7 @@
         fragment.appendChild(document.createTextNode(' / '));
         badge.insertBefore(fragment, badge.firstChild);
 
+        // When search page has plural pages, add "Load all pages" button
         const aTags = badge.getElementsByTagName('a');
         if (aTags.length) {
             const loadBtn = document.createElement('button');
@@ -554,61 +559,9 @@
                 .map(x => aTags[0].href.replace(/&ppage=\d+/, "&ppage=" + x));
 
             // Add click event
-            loadBtn.addEventListener('click', async () => {
-                loadBtn.disabled = true;
-
-                // get zListTags from urls
-                const getZListTags = async (url) => {
-                    // eslint-disable-next-line no-undef
-                    const res = await fetch(url);
-                    const text = await res.text();
-                    // eslint-disable-next-line no-undef
-                    const parsedDoc = new DOMParser().parseFromString(text, "text/html");
-                    return parsedDoc.getElementsByClassName('z-list');
-                };
-
-                // Add progress bar
-                const progressBar = document.createElement('div');
-                progressBar.classList.add('fas-progress-bar');
-                const progress = document.createElement('div');
-                progress.classList.add('fas-progress');
-                progress.style.width = 1 / last * 100 + '%';
-
-                progressBar.appendChild(progress);
-                badge.parentElement.insertBefore(progressBar, badge.nextElementSibling);
-
-                // Set Dataset to zListTag
-                const loadedZListTags = [];
-                for (let i = 0; i < urls.length; i++) {
-                    const zListTags = await getZListTags(urls[i]);
-                    [...zListTags].forEach(x => {
-                        setDatasetToZListTag(x);
-                        loadedZListTags.push(x);
-                    });
-                    progress.style.width = (i + 2) / last * 100 + '%';
-                }
-
-                // Set storyid to .filter_placeholder tags.
-                // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
-                for (let i = 0; i < loadedZListTags.length - 1; i++) {
-                    if (!loadedZListTags[i].dataset.storyid && loadedZListTags[i + 1].dataset.storyid) {
-                        loadedZListTags[i].dataset.storyid = loadedZListTags[i + 1].dataset.storyid;
-                        i++;
-                    }
-                }
-
-                // Add loaded zListTags to #cs_inside
-                const ssInside = document.getElementById('ss_inside');
-                loadedZListTags.forEach(x => {
-                    ssInside.appendChild(x);
-                });
-
-                // Reset filter
-                const clearTag =
-                    document.getElementsByClassName('fas-filter-menus')[0].lastElementChild;
-                clearTag.click();
+            loadBtn.addEventListener('click', {
+                urls: urls, tabId: 'ss', handleEvent: loadAllPages
             });
-
             const fragment = document.createDocumentFragment();
             fragment.appendChild(document.createTextNode(' '));
             fragment.appendChild(loadBtn);
