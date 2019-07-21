@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.21
+// @version      1.3
 // @license      MIT
 // @description  Add filters and additional sorters to author page and community page of Fanfiction.net. Add "Load all pages" button to community page.
 // @author       Vannius
 // @match        https://www.fanfiction.net/u/*
 // @match        https://www.fanfiction.net/community/*
+// @match        https://www.fanfiction.net/search/*
 // @grant        GM_addStyle
 // ==/UserScript==
 
@@ -394,7 +395,7 @@
         const scriptTag = document.querySelector('#content_wrapper_inner script');
         scriptTag.parentElement.insertBefore(newTab, scriptTag);
 
-        // Make cs badge which show number of stories and page information
+        // Make cs badge which show number of stories, page information and "Load all pages" button
         const badge = document.createElement('div');
         badge.id = 'l_' + newTab.id;
         badge.align = 'center';
@@ -496,9 +497,126 @@
         }
 
         scriptTag.parentElement.insertBefore(badge, newTab);
+    } else if (
+        /www\.fanfiction\.net\/search\//.test(window.location.href) &&
+        /&type=story/.test(window.location.search)
+    ) {
+        // Restructure elements of search page.
+        const divTags = document.querySelectorAll('#content_wrapper_inner > div');
+        if (divTags.length < 2) {
+            return;
+        }
+
+        const newTabInside = document.createElement('div');
+        newTabInside.id = 'ss_inside';
+        newTabInside.appendChild(divTags[0]);
+        newTabInside.appendChild(divTags[1]);
+
+        const newTab = document.createElement('div');
+        newTab.id = 'ss';
+        newTab.appendChild(document.createElement('br'));
+        newTab.appendChild(newTabInside);
+        divTags[2].parentElement.insertBefore(newTab, divTags[2]);
+
+        // Make ss badge which show number of stories and "Load all pages" button
+        const badge = document.getElementsByTagName('center')[0];
+        badge.id = 'l_' + newTab.id;
+        badge.classList.add('fas-badge');
+
+        const badgeSpan = document.createElement('span');
+        badgeSpan.classList.add('fas-badge-number');
+        badgeSpan.textContent =
+            document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(document.createTextNode('Searched Stories: '));
+        fragment.appendChild(badgeSpan);
+        fragment.appendChild(document.createTextNode(' / '));
+        badge.insertBefore(fragment, badge.firstChild);
+
+        const aTags = badge.getElementsByTagName('a');
+        if (aTags.length) {
+            const loadBtn = document.createElement('button');
+            loadBtn.appendChild(document.createTextNode("Load all pages"));
+            loadBtn.disabled = false;
+            loadBtn.classList.add('fas-load-button');
+
+            const currentPageMatch = window.location.search.match(/&ppage=(\d+)/);
+            const current = currentPageMatch ? parseInt(currentPageMatch[1]) : 1;
+            const last = [...aTags]
+                .map(aTag => aTag.href.match(/&ppage=(\d+)/))
+                .map(matches => parseInt(matches[1]))
+                .reduce((p, x) => p > x ? p : x, current);
+
+            const urls = [...Array(last).keys()]
+                .map(x => x + 1)
+                .filter(x => x !== current)
+                .map(x => aTags[0].href.replace(/&ppage=\d+/, "&ppage=" + x));
+
+            // Add click event
+            loadBtn.addEventListener('click', async () => {
+                loadBtn.disabled = true;
+
+                // get zListTags from urls
+                const getZListTags = async (url) => {
+                    // eslint-disable-next-line no-undef
+                    const res = await fetch(url);
+                    const text = await res.text();
+                    // eslint-disable-next-line no-undef
+                    const parsedDoc = new DOMParser().parseFromString(text, "text/html");
+                    return parsedDoc.getElementsByClassName('z-list');
+                };
+
+                // Add progress bar
+                const progressBar = document.createElement('div');
+                progressBar.classList.add('fas-progress-bar');
+                const progress = document.createElement('div');
+                progress.classList.add('fas-progress');
+                progress.style.width = 1 / last * 100 + '%';
+
+                progressBar.appendChild(progress);
+                badge.parentElement.insertBefore(progressBar, badge.nextElementSibling);
+
+                // Set Dataset to zListTag
+                const loadedZListTags = [];
+                for (let i = 0; i < urls.length; i++) {
+                    const zListTags = await getZListTags(urls[i]);
+                    [...zListTags].forEach(x => {
+                        setDatasetToZListTag(x);
+                        loadedZListTags.push(x);
+                    });
+                    progress.style.width = (i + 2) / last * 100 + '%';
+                }
+
+                // Set storyid to .filter_placeholder tags.
+                // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
+                for (let i = 0; i < loadedZListTags.length - 1; i++) {
+                    if (!loadedZListTags[i].dataset.storyid && loadedZListTags[i + 1].dataset.storyid) {
+                        loadedZListTags[i].dataset.storyid = loadedZListTags[i + 1].dataset.storyid;
+                        i++;
+                    }
+                }
+
+                // Add loaded zListTags to #cs_inside
+                const ssInside = document.getElementById('ss_inside');
+                loadedZListTags.forEach(x => {
+                    ssInside.appendChild(x);
+                });
+
+                // Reset filter
+                const clearTag =
+                    document.getElementsByClassName('fas-filter-menus')[0].lastElementChild;
+                clearTag.click();
+            });
+
+            const fragment = document.createDocumentFragment();
+            fragment.appendChild(document.createTextNode(' '));
+            fragment.appendChild(loadBtn);
+            badge.appendChild(fragment);
+        }
     }
 
-    for (let tabId of ['st', 'fs', 'cs']) {
+    for (let tabId of ['st', 'fs', 'cs', 'ss']) {
         // Initiation
         const tab = document.getElementById(tabId);
         const tabInside = document.getElementById(tabId + '_inside');
@@ -597,7 +715,7 @@
         });
         if (['st', 'fs'].includes(tabId)) {
             tab.firstElementChild.appendChild(fragment);
-        } else if (tabId === 'cs') {
+        } else if (['cs', 'ss'].includes(tabId)) {
             const sorterTag = document.createElement('div');
             sorterTag.classList.add('fas-sorter-div');
             sorterTag.appendChild(fragment);
