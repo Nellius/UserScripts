@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.32
+// @version      1.33
 // @license      MIT
 // @description  Add filters and additional sorters to author, community and search pages of Fanfiction.net. Add "Load all pages" button to community and search pages.
 // @author       Vannius
@@ -319,9 +319,9 @@
                 x.dataset.wordcount = matches[7].replace(/[^\d]/g, '');
                 x.dataset.ratingtimes = matches[8] ? matches[8].replace(/[^\d]/g, '') : 0;
                 const xutimes = zPadtop2Tag.getElementsByTagName('span');
-                x.dataset.datesubmit = xutimes[0].dataset.xutime;
+                x.dataset.datesubmit = xutimes[xutimes.length - 1].dataset.xutime;
                 x.dataset.dateupdate = xutimes.length === 2
-                    ? xutimes[1].dataset.xutime : x.dataset.datesubmit;
+                    ? xutimes[0].dataset.xutime : x.dataset.datesubmit;
                 x.dataset.statusid = / - Complete$/.test(rawText) ? 2 : 1;
             }
 
