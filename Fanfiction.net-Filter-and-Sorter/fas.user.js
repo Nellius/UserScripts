@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.42
+// @version      1.43
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -1394,21 +1394,6 @@
                 filterDiv.appendChild(filterTag);
                 filterDiv.appendChild(document.createTextNode(' '));
             });
-
-            // Don't display filter when other filter which uses same dataId is disabled.
-            Object.keys(filterDic)
-                .forEach(filterKey => {
-                    const filterDisabled = Object.keys(filterDic)
-                        .filter(x => x !== filterKey)
-                        .filter(x => filterDic[x].dataId === filterDic[filterKey].dataId)
-                        .filter(x => initialSelectDic[x].menuDisabled);
-
-                    if (filterDisabled.length) {
-                        const selectTag =
-                            filterDiv.querySelector('#' + tabId + '_' + filterKey + '_select');
-                        selectTag.style.display = 'none';
-                    }
-                });
 
             // Add Clear button:
             // Clear filter settings and revert attributes and class according to initialSelectDic.
