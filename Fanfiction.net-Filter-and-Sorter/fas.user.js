@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.41
+// @version      1.42
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -454,7 +454,7 @@
     if (/www\.fanfiction\.net\/community\//.test(window.location.href)) {
         // Restructure elements of community page.
         const zListTags = document.getElementsByClassName('z-list');
-        if (!zListTags.length) {
+        if (zListTags.length <= 1) {
             return;
         }
 
@@ -529,7 +529,8 @@
     ) {
         // Restructure elements of search page.
         const divTags = document.querySelectorAll('#content_wrapper_inner > div');
-        if (divTags.length < 2) {
+        const zListTags = document.getElementsByClassName('z-list');
+        if (divTags.length < 2 || zListTags.length <= 1) {
             return;
         }
 
@@ -593,7 +594,7 @@
     } else if (document.getElementById('filters')) {
         // Restructure elements of browse page.
         const zListTags = document.getElementsByClassName('z-list');
-        if (!zListTags.length) {
+        if (zListTags.length <= 1) {
             return;
         }
 
