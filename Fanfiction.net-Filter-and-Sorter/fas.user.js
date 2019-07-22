@@ -1,13 +1,11 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.32
+// @version      1.42
 // @license      MIT
-// @description  Add filters and additional sorters to author, community and search pages of Fanfiction.net. Add "Load all pages" button to community and search pages.
+// @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
-// @match        https://www.fanfiction.net/u/*
-// @match        https://www.fanfiction.net/community/*
-// @match        https://www.fanfiction.net/search/*
+// @match        https://www.fanfiction.net/*
 // @grant        GM_addStyle
 // ==/UserScript==
 
@@ -307,26 +305,26 @@
             const rawText = zPadtop2Tag.textContent;
             const dataText = rawText.replace(/ - Complete$/, '');
             const matches =
-                dataText.match(/^(Crossover - )?(.+) - Rated: ([^ ]+) - ([^ ]+)( - [^ ]+)? - Chapters: (\d+) - Words: ([\d,]+)( - Reviews: [\d,]+)?( - Favs: [\d,]+)?( - Follows: [\d,]+)? ?(- Updated: [^-]+)?(- Published: [^-]+)?(- .*)?$/);
+                dataText.match(/^(Crossover - )?(.+ - )?Rated: ([^ ]+) - ([^ ]+)( - [^ ]+)? - Chapters: (\d+) - Words: ([\d,]+)( - Reviews: [\d,]+)?( - Favs: [\d,]+)?( - Follows: [\d,]+)? ?(- Updated: [^-]+)?(- Published: [^-]+)?(- .*)?$/);
 
             // These dataset are defined in author page.
             if (!x.dataset.story_id) {
                 const url = new URL(x.firstElementChild.href);
                 x.dataset.storyid = url.pathname.split('/')[2];
                 x.dataset.title = x.firstElementChild.textContent;
-                x.dataset.category = matches[2];
+                x.dataset.category = matches[2] ? matches[2].replace(/ - $/g, '') : '';
                 x.dataset.chapters = matches[6].replace(/[^\d]/g, '');
                 x.dataset.wordcount = matches[7].replace(/[^\d]/g, '');
                 x.dataset.ratingtimes = matches[8] ? matches[8].replace(/[^\d]/g, '') : 0;
                 const xutimes = zPadtop2Tag.getElementsByTagName('span');
-                x.dataset.datesubmit = xutimes[0].dataset.xutime;
+                x.dataset.datesubmit = xutimes[xutimes.length - 1].dataset.xutime;
                 x.dataset.dateupdate = xutimes.length === 2
-                    ? xutimes[1].dataset.xutime : x.dataset.datesubmit;
+                    ? xutimes[0].dataset.xutime : x.dataset.datesubmit;
                 x.dataset.statusid = / - Complete$/.test(rawText) ? 2 : 1;
             }
 
             // Set following dataset for makeStoryData.
-            x.dataset.crossover = matches[1] ? 1 : 0;
+            x.dataset.crossover = matches[2] ? (matches[1] ? 1 : 0) : '';
             x.dataset.rating = matches[3];
             x.dataset.language = matches[4];
             x.dataset.favtimes = matches[9] ? matches[9].replace(/[^\d]/g, '') : 0;
@@ -372,6 +370,22 @@
         }
     };
 
+    const getFandomData = () => {
+        const aTags = [...document.getElementById('content_wrapper_inner').children]
+            .filter(element => element.tagName === 'A');
+
+        if (aTags.length === 1) {
+            const fandom = aTags[0].nextElementSibling.nextSibling.textContent.trim();
+            return { category: fandom, crossover: 0 };
+        } else {
+            const crossoverFandom = aTags
+                .filter(aTag => /\/crossovers\/[^/]+\/\d+\//.test(aTag.href))
+                .map(aTag => aTag.textContent)
+                .join(' & ');
+            return { category: crossoverFandom, crossover: 1 };
+        }
+    };
+
     async function loadAllPages () {
         const badge = document.getElementById('l_' + this.tabId);
         const btn = badge.getElementsByClassName('fas-load-button')[0];
@@ -399,10 +413,16 @@
 
         // Set Dataset to zListTag
         const loadedZListTags = [];
+        const fandomData = getFandomData();
         for (let i = 0; i < this.urls.length; i++) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
             const zListTags = await getZListTags(this.urls[i]);
             [...zListTags].forEach(x => {
                 setDatasetToZListTag(x);
+                if (!x.dataset.category) {
+                    x.dataset.category = fandomData.category;
+                    x.dataset.crossover = fandomData.crossover;
+                }
                 loadedZListTags.push(x);
             });
             progress.style.width = (i + 2) / (this.urls.length + 1) * 100 + '%';
@@ -429,10 +449,12 @@
         clearTag.click();
     };
 
+    // Restructrue elements for community, search and browse pages
+    // and add "Load all pages" button
     if (/www\.fanfiction\.net\/community\//.test(window.location.href)) {
         // Restructure elements of community page.
         const zListTags = document.getElementsByClassName('z-list');
-        if (!zListTags.length) {
+        if (zListTags.length <= 1) {
             return;
         }
 
@@ -450,7 +472,8 @@
         const scriptTag = document.querySelector('#content_wrapper_inner script');
         scriptTag.parentElement.insertBefore(newTab, scriptTag);
 
-        // Make cs badge which show number of stories, page information and "Load all pages" button
+        // Make cs badge which contain number of community stories,
+        // page information and "Load all pages" button
         const badge = document.createElement('div');
         badge.id = 'l_' + newTab.id;
         badge.align = 'center';
@@ -506,7 +529,8 @@
     ) {
         // Restructure elements of search page.
         const divTags = document.querySelectorAll('#content_wrapper_inner > div');
-        if (divTags.length < 2) {
+        const zListTags = document.getElementsByClassName('z-list');
+        if (divTags.length < 2 || zListTags.length <= 1) {
             return;
         }
 
@@ -521,8 +545,8 @@
         newTab.appendChild(newTabInside);
         divTags[2].parentElement.insertBefore(newTab, divTags[2]);
 
-        // Reshape center tag to ss badge
-        // which show number of searched stories and "Load all pages" button
+        // Reshape center tag to ss badge which contain number of searched stories,
+        // page information and "Load all pages" button
         const badge = document.getElementsByTagName('center')[0];
         badge.id = 'l_' + newTab.id;
         badge.classList.add('fas-badge');
@@ -567,9 +591,88 @@
             fragment.appendChild(loadBtn);
             badge.appendChild(fragment);
         }
+    } else if (document.getElementById('filters')) {
+        // Restructure elements of browse page.
+        const zListTags = document.getElementsByClassName('z-list');
+        if (zListTags.length <= 1) {
+            return;
+        }
+
+        const newTabInside = document.createElement('div');
+        newTabInside.id = 'bs_inside';
+        [...zListTags].forEach(x => {
+            newTabInside.appendChild(x);
+        });
+
+        const newTab = document.createElement('div');
+        newTab.id = 'bs';
+        newTab.appendChild(document.createElement('br'));
+        newTab.appendChild(newTabInside);
+
+        const centerTags = [...document.getElementsByTagName('center')]
+            .filter(centerTag => centerTag.getElementsByTagName('a').length);
+        if (centerTags.length) {
+            centerTags[0].parentElement.insertBefore(newTab, centerTags[1]);
+        } else {
+            const scriptTag = document.querySelector('#content_wrapper_inner script');
+            scriptTag.parentElement.insertBefore(newTab, scriptTag);
+        }
+
+        // Reshape center tag to bs badge which contain number of browse stories,
+        // page information and "Load all pages" button
+        const badge = centerTags.length ? centerTags[0] : document.createElement('center');
+        badge.id = 'l_' + newTab.id;
+        badge.classList.add('fas-badge');
+
+        const badgeSpan = document.createElement('span');
+        badgeSpan.classList.add('fas-badge-number');
+        badgeSpan.textContent =
+            document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(document.createTextNode('Browse Stories: '));
+        fragment.appendChild(badgeSpan);
+        if (!centerTags.length) {
+            badge.insertBefore(fragment, badge.firstChild);
+            newTab.parentElement.insertBefore(badge, newTab);
+        } else {
+            fragment.appendChild(document.createTextNode(' / '));
+            badge.insertBefore(fragment, badge.firstChild);
+        }
+
+        // When search page has plural pages, add "Load all pages" button
+        const aTags = badge.getElementsByTagName('a');
+        if (aTags.length) {
+            const loadBtn = document.createElement('button');
+            loadBtn.appendChild(document.createTextNode("Load all pages"));
+            loadBtn.disabled = false;
+            loadBtn.classList.add('fas-load-button');
+
+            const currentPageMatch = window.location.search.match(/&p=(\d+)/);
+            const current = currentPageMatch ? parseInt(currentPageMatch[1]) : 1;
+            const last = [...aTags]
+                .map(aTag => aTag.href.match(/&p=(\d+)/))
+                .map(matches => parseInt(matches[1]))
+                .reduce((p, x) => p > x ? p : x, current);
+
+            const urls = [...Array(last).keys()]
+                .map(x => x + 1)
+                .filter(x => x !== current)
+                .map(x => aTags[0].href.replace(/&p=\d+/, "&p=" + x));
+
+            // Add click event
+            loadBtn.addEventListener('click', {
+                urls: urls, tabId: 'bs', handleEvent: loadAllPages
+            });
+            const fragment = document.createDocumentFragment();
+            fragment.appendChild(document.createTextNode(' '));
+            fragment.appendChild(loadBtn);
+            badge.appendChild(fragment);
+        }
     }
 
-    for (let tabId of ['st', 'fs', 'cs', 'ss']) {
+    // Add filters and sorters
+    for (let tabId of ['st', 'fs', 'cs', 'ss', 'bs']) {
         // Initiation
         const tab = document.getElementById(tabId);
         const tabInside = document.getElementById(tabId + '_inside');
@@ -585,6 +688,13 @@
         [...zListTags].forEach(x => {
             setDatasetToZListTag(x);
         });
+        if (!zListTags[0].dataset.category) {
+            const fandomData = getFandomData();
+            [...zListTags].forEach(x => {
+                x.dataset.category = fandomData.category;
+                x.dataset.crossover = fandomData.crossover;
+            });
+        }
 
         // Set storyid to .filter_placeholder tags.
         // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
@@ -668,7 +778,7 @@
         });
         if (['st', 'fs'].includes(tabId)) {
             tab.firstElementChild.appendChild(fragment);
-        } else if (['cs', 'ss'].includes(tabId)) {
+        } else if (['cs', 'ss', 'bs'].includes(tabId)) {
             const sorterTag = document.createElement('div');
             sorterTag.classList.add('fas-sorter-div');
             sorterTag.appendChild(fragment);
@@ -1071,9 +1181,9 @@
             badge.textContent = displayedStoryNumber;
         };
 
-        // Add filter Div
-        const addFilterDiv = () => {
-            // Add filters
+        // Append filter Div
+        const appendFilterDiv = () => {
+            // Make filterDiv
             const filterDiv = document.createElement('div');
             filterDiv.classList.add('fas-filter-menus');
             filterDiv.appendChild(document.createTextNode('Filter: '));
@@ -1278,7 +1388,7 @@
                 return selectTag;
             };
 
-            // Add filters
+            // Make and append filters
             Object.keys(filterDic).forEach(filterKey => {
                 const filterTag = makeSelectTag(filterKey, filterDic[filterKey].text);
                 filterDiv.appendChild(filterTag);
@@ -1361,15 +1471,16 @@
                 // remove old filterDiv and add new filterDiv.
                 if (allPageLoaded) {
                     tab.removeChild(tab.firstElementChild);
-                    addFilterDiv();
+                    appendFilterDiv();
                 }
             });
             filterDiv.appendChild(clear);
 
-            // Append filters
+            // Append filterDiv
             tab.insertBefore(filterDiv, tab.firstChild);
         };
 
-        addFilterDiv();
+        // Append filters
+        appendFilterDiv();
     }
 })();
