@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.4
+// @version      1.41
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -415,6 +415,7 @@
         const loadedZListTags = [];
         const fandomData = getFandomData();
         for (let i = 0; i < this.urls.length; i++) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
             const zListTags = await getZListTags(this.urls[i]);
             [...zListTags].forEach(x => {
                 setDatasetToZListTag(x);
