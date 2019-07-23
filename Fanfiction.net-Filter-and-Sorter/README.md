@@ -103,19 +103,23 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
 
 When filter mode is 'gt', 'ge', 'le' or 'dateRange', you have to specify options property. Also you can edit options by changing specified options property.
 
-For example, if you want to single out stories with greater than 200K word counts, add '200K' to wordCountOptions.
+For example, if you want to single out stories with updated within 3 months, add '3 months' to dateRangeOptions.
 
 ```javascript
     // Options for 'gt', 'ge', 'le', 'dateRange' mode.
+    // Options for chapters filters.
+    // Format: [\d+(K)?] in ascending order
+    const chapterOptions = ['1', '5', '10', '20', '30', '50'];
     // Options for word_count_gt and word_count_le filters.
     // Format: [\d+(K)?] in ascending order
-    const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K', '200K'];
+    const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K', '200K', '300K'];
     // Options for reviews, favs and follows filters.
     // Format: [\d+(K)?] in ascending order
-    const kudoCountOptions = ['10', '50', '100', '200', '400', '600', '800', '1K'];
+    const kudoCountOptions = ['10', '50', '100', '200', '400', '600', '800', '1K', '2K', '3K'];
     // Options for updated and published filters.
     // Format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
-    const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
+    const dateRangeOptions = ['24 hours', '1 week', '1 month', '3 months', '6 months', '1 year', '3 years', '5 years'];
+
 ```
 
 ### Sort characters of relationship
