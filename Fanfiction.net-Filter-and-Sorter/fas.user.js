@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.5
+// @version      1.51
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -481,8 +481,9 @@
 
         const badgeSpan = document.createElement('span');
         badgeSpan.classList.add('fas-badge-number');
-        badgeSpan.textContent =
-            document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+        badgeSpan.textContent = [...zListTags]
+            .filter(zListTag => !zListTag.classList.contains('filter_placeholder'))
+            .length;
         badge.appendChild(document.createTextNode('Community Stories: '));
         badge.appendChild(badgeSpan);
 
@@ -553,8 +554,9 @@
 
         const badgeSpan = document.createElement('span');
         badgeSpan.classList.add('fas-badge-number');
-        badgeSpan.textContent =
-            document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+        badgeSpan.textContent = [...zListTags]
+            .filter(zListTag => !zListTag.classList.contains('filter_placeholder'))
+            .length;
 
         const fragment = document.createDocumentFragment();
         fragment.appendChild(document.createTextNode('Searched Stories: '));
@@ -626,8 +628,9 @@
 
         const badgeSpan = document.createElement('span');
         badgeSpan.classList.add('fas-badge-number');
-        badgeSpan.textContent =
-            document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+        badgeSpan.textContent = [...zListTags]
+            .filter(zListTag => !zListTag.classList.contains('filter_placeholder'))
+            .length;
 
         const fragment = document.createDocumentFragment();
         fragment.appendChild(document.createTextNode('Browse Stories: '));
