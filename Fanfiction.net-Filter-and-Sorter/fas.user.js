@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.42
+// @version      1.51
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -481,8 +481,9 @@
 
         const badgeSpan = document.createElement('span');
         badgeSpan.classList.add('fas-badge-number');
-        badgeSpan.textContent =
-            document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+        badgeSpan.textContent = [...zListTags]
+            .filter(zListTag => !zListTag.classList.contains('filter_placeholder'))
+            .length;
         badge.appendChild(document.createTextNode('Community Stories: '));
         badge.appendChild(badgeSpan);
 
@@ -553,8 +554,9 @@
 
         const badgeSpan = document.createElement('span');
         badgeSpan.classList.add('fas-badge-number');
-        badgeSpan.textContent =
-            document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+        badgeSpan.textContent = [...zListTags]
+            .filter(zListTag => !zListTag.classList.contains('filter_placeholder'))
+            .length;
 
         const fragment = document.createDocumentFragment();
         fragment.appendChild(document.createTextNode('Searched Stories: '));
@@ -626,8 +628,9 @@
 
         const badgeSpan = document.createElement('span');
         badgeSpan.classList.add('fas-badge-number');
-        badgeSpan.textContent =
-            document.querySelectorAll('div.z-list:not(.filter_placeholder)').length;
+        badgeSpan.textContent = [...zListTags]
+            .filter(zListTag => !zListTag.classList.contains('filter_placeholder'))
+            .length;
 
         const fragment = document.createDocumentFragment();
         fragment.appendChild(document.createTextNode('Browse Stories: '));
@@ -1258,7 +1261,6 @@
                 })();
 
                 initialSelectDic[filterKey] = {};
-                initialSelectDic[filterKey].initialMenuClasses = [];
                 initialSelectDic[filterKey].menuDisabled = false;
                 initialSelectDic[filterKey].initialOptionDic = {};
                 const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
@@ -1376,9 +1378,9 @@
                 }
 
                 // Log initial classList
-                initialSelectDic[filterKey].initialMenuClasses = [...selectTag.classList];
+                initialSelectDic[filterKey].initialMenuClassName = selectTag.className;
                 [...optionTags].forEach(optionTag => {
-                    initialOptionDic[optionTag.value].initialItemClasses = [...optionTag.classList];
+                    initialOptionDic[optionTag.value].initialItemClassName = optionTag.className;
                 });
 
                 // Change display of stories by selected filter value.
@@ -1395,21 +1397,6 @@
                 filterDiv.appendChild(document.createTextNode(' '));
             });
 
-            // Don't display filter when other filter which uses same dataId is disabled.
-            Object.keys(filterDic)
-                .forEach(filterKey => {
-                    const filterDisabled = Object.keys(filterDic)
-                        .filter(x => x !== filterKey)
-                        .filter(x => filterDic[x].dataId === filterDic[filterKey].dataId)
-                        .filter(x => initialSelectDic[x].menuDisabled);
-
-                    if (filterDisabled.length) {
-                        const selectTag =
-                            filterDiv.querySelector('#' + tabId + '_' + filterKey + '_select');
-                        selectTag.style.display = 'none';
-                    }
-                });
-
             // Add Clear button:
             // Clear filter settings and revert attributes and class according to initialSelectDic.
             // Make new filterDiv when "Load all pages" button is clicked.
@@ -1423,7 +1410,8 @@
                     .filter(filterKey => selectDic[filterKey].accessible)
                     .map(filterKey => selectDic[filterKey].value !== 'default')
                     .some(x => x);
-                const zListTags = document.querySelectorAll('div.z-list:not(.filter_placeholder)');
+                const zListTags = [...tabInside.getElementsByClassName('z-list')]
+                    .filter(zListTag => !zListTag.classList.contains('filtered'));
                 const allPageLoaded = zListTags.length !== initialStoryIds.length;
 
                 // Is there a need to run clear feature?
@@ -1432,39 +1420,44 @@
                         .filter(filterKey => selectDic[filterKey].accessible)
                         .forEach(filterKey => {
                             // Clear each filter
-                            selectDic[filterKey].dom.value = 'default';
+                            if (selectDic[filterKey].value !== 'default') {
+                                selectDic[filterKey].dom.value = 'default';
+                            }
 
                             // Revert attributes and class of select tag according to initialSelectDic.
-                            selectDic[filterKey].dom.classList
-                                .remove(...selectDic[filterKey].dom.classList);
-                            selectDic[filterKey].dom.classList
-                                .add(...initialSelectDic[filterKey].initialMenuClasses);
+                            const initialMenuClassName = initialSelectDic[filterKey].initialMenuClassName;
+                            if (selectDic[filterKey].dom.className !== initialMenuClassName) {
+                                selectDic[filterKey].dom.className = initialMenuClassName;
+                            }
 
                             // Revert attributes and class of option tag according to optionDic.
                             const optionDic = selectDic[filterKey].optionDic;
+                            const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
                             Object.keys(optionDic).forEach(optionValue => {
-                                optionDic[optionValue].dom.classList
-                                    .remove(...optionDic[optionValue].dom.classList);
-                                optionDic[optionValue].dom.removeAttribute('hidden');
+                                const initialItemClassName =
+                                    initialOptionDic[optionValue].initialItemClassName;
 
-                                const initialOptionDic =
-                                    initialSelectDic[filterKey].initialOptionDic;
-                                optionDic[optionValue].dom.classList
-                                    .add(...initialOptionDic[optionValue].initialItemClasses);
+                                if (optionDic[optionValue].dom.hasAttribute('hidden')) {
+                                    optionDic[optionValue].dom.removeAttribute('hidden');
+                                }
+                                if (optionDic[optionValue].dom.className !== initialItemClassName) {
+                                    optionDic[optionValue].dom.className = initialItemClassName;
+                                }
                             });
                         });
                 }
 
                 if (changed || allPageLoaded) {
                     // Change display of stories to initial state.
-                    const visibleZListTags = tabInside.querySelectorAll('div.z-list:not(.filtered)');
-                    [...visibleZListTags].forEach(x => {
-                        x.style.display = '';
-                    });
+                    zListTags
+                        .filter(zListTag => zListTag.style.display === 'none')
+                        .forEach(x => {
+                            x.style.display = '';
+                        });
 
                     // Change story number to initial state.
                     const badge = document.getElementById('l_' + tabId).firstElementChild;
-                    badge.textContent = visibleZListTags.length;
+                    badge.textContent = zListTags.length;
                 }
 
                 // When "Load all pages" button is clicked,
