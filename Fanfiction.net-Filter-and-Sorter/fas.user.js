@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.43
+// @version      1.5
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -1258,7 +1258,6 @@
                 })();
 
                 initialSelectDic[filterKey] = {};
-                initialSelectDic[filterKey].initialMenuClasses = [];
                 initialSelectDic[filterKey].menuDisabled = false;
                 initialSelectDic[filterKey].initialOptionDic = {};
                 const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
@@ -1376,9 +1375,9 @@
                 }
 
                 // Log initial classList
-                initialSelectDic[filterKey].initialMenuClasses = [...selectTag.classList];
+                initialSelectDic[filterKey].initialMenuClassName = selectTag.className;
                 [...optionTags].forEach(optionTag => {
-                    initialOptionDic[optionTag.value].initialItemClasses = [...optionTag.classList];
+                    initialOptionDic[optionTag.value].initialItemClassName = optionTag.className;
                 });
 
                 // Change display of stories by selected filter value.
@@ -1408,7 +1407,8 @@
                     .filter(filterKey => selectDic[filterKey].accessible)
                     .map(filterKey => selectDic[filterKey].value !== 'default')
                     .some(x => x);
-                const zListTags = document.querySelectorAll('div.z-list:not(.filter_placeholder)');
+                const zListTags = [...tabInside.getElementsByClassName('z-list')]
+                    .filter(zListTag => !zListTag.classList.contains('filtered'));
                 const allPageLoaded = zListTags.length !== initialStoryIds.length;
 
                 // Is there a need to run clear feature?
@@ -1417,39 +1417,44 @@
                         .filter(filterKey => selectDic[filterKey].accessible)
                         .forEach(filterKey => {
                             // Clear each filter
-                            selectDic[filterKey].dom.value = 'default';
+                            if (selectDic[filterKey].value !== 'default') {
+                                selectDic[filterKey].dom.value = 'default';
+                            }
 
                             // Revert attributes and class of select tag according to initialSelectDic.
-                            selectDic[filterKey].dom.classList
-                                .remove(...selectDic[filterKey].dom.classList);
-                            selectDic[filterKey].dom.classList
-                                .add(...initialSelectDic[filterKey].initialMenuClasses);
+                            const initialMenuClassName = initialSelectDic[filterKey].initialMenuClassName;
+                            if (selectDic[filterKey].dom.className !== initialMenuClassName) {
+                                selectDic[filterKey].dom.className = initialMenuClassName;
+                            }
 
                             // Revert attributes and class of option tag according to optionDic.
                             const optionDic = selectDic[filterKey].optionDic;
+                            const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
                             Object.keys(optionDic).forEach(optionValue => {
-                                optionDic[optionValue].dom.classList
-                                    .remove(...optionDic[optionValue].dom.classList);
-                                optionDic[optionValue].dom.removeAttribute('hidden');
+                                const initialItemClassName =
+                                    initialOptionDic[optionValue].initialItemClassName;
 
-                                const initialOptionDic =
-                                    initialSelectDic[filterKey].initialOptionDic;
-                                optionDic[optionValue].dom.classList
-                                    .add(...initialOptionDic[optionValue].initialItemClasses);
+                                if (optionDic[optionValue].dom.hasAttribute('hidden')) {
+                                    optionDic[optionValue].dom.removeAttribute('hidden');
+                                }
+                                if (optionDic[optionValue].dom.className !== initialItemClassName) {
+                                    optionDic[optionValue].dom.className = initialItemClassName;
+                                }
                             });
                         });
                 }
 
                 if (changed || allPageLoaded) {
                     // Change display of stories to initial state.
-                    const visibleZListTags = tabInside.querySelectorAll('div.z-list:not(.filtered)');
-                    [...visibleZListTags].forEach(x => {
-                        x.style.display = '';
-                    });
+                    zListTags
+                        .filter(zListTag => zListTag.style.display === 'none')
+                        .forEach(x => {
+                            x.style.display = '';
+                        });
 
                     // Change story number to initial state.
                     const badge = document.getElementById('l_' + tabId).firstElementChild;
-                    badge.textContent = visibleZListTags.length;
+                    badge.textContent = zListTags.length;
                 }
 
                 // When "Load all pages" button is clicked,
