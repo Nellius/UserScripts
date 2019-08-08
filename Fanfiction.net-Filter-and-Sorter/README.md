@@ -71,11 +71,14 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
     // text: text for filter select dom
     // title: title for filter select dom
     // mode: used to determine how to compare selectValue and storyValue in throughFilter()
-    // options: when mode is 'gt', 'ge', 'le' or 'dateRange', you have to specify.
+    // options: required when mode is 'gt', 'ge', 'le', 'dateRange'
     // reverse: reverse result of throughFilter()
+    // condition: only if filter[filterKey] has defined value, display filter
     const filterDic = {
-        fandom: { dataId: 'fandom', text: 'Fandom', title: "Fandom filter", mode: 'contain' },
-        crossover: { dataId: 'crossover', text: 'Crossover ?', title: "Crossover filter", mode: 'equal' },
+        fandom_a: { dataId: 'fandom', text: 'Fandom A', title: "Fandom filter a", mode: 'contain' },
+        crossover: { dataId: 'crossover', text: '?', title: "Crossover filter", mode: 'equal' },
+        // Display only if there are crossover fictions
+        fandom_b: { dataId: 'fandom', text: 'Fandom B', title: "Fandom filter b", mode: 'contain', condition: { filterKey: 'crossover', value: 'X' } },
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         //language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre_a: { dataId: 'genre', text: 'Genre A', title: "Genre a filter", mode: 'contain' },
