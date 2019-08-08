@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.51
+// @version      1.62
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
 // @match        https://www.fanfiction.net/*
 // @grant        GM_addStyle
+// @grant        GM_getResourceText
+// @resource     JSON https://raw.githubusercontent.com/Nellius/FanFiction-FandomData/master/json/exceptional-fandom.json
 // ==/UserScript==
 
 (function () {
@@ -19,26 +21,30 @@
     const chapterOptions = ['1', '5', '10', '20', '30', '50'];
     // Options for word_count_gt and word_count_le filters.
     // Format: [\d+(K)?] in ascending order
-    const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K'];
+    const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K', '200K', '300K'];
     // Options for reviews, favs and follows filters.
     // Format: [\d+(K)?] in ascending order
-    const kudoCountOptions = ['10', '50', '100', '200', '400', '600', '800', '1K'];
+    const kudoCountOptions = ['10', '50', '100', '200', '400', '600', '800', '1K', '2K', '3K'];
     // Options for updated and published filters.
     // Format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
-    const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
+    const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years', '5 years'];
 
     // dataId: property key of storyData defined in makeStoryData()
     // text: text for filter select dom
     // title: title for filter select dom
     // mode: used to determine how to compare selectValue and storyValue in throughFilter()
-    // options: when mode is 'gt', 'ge', 'le', 'dateRange', you have to specify.
+    // options: required when mode is 'gt', 'ge', 'le', 'dateRange'
     // reverse: reverse result of throughFilter()
+    // condition: display filter only if filter[filterKey] has defined value
     const filterDic = {
-        fandom: { dataId: 'fandom', text: 'Fandom', title: "Fandom filter", mode: 'contain' },
-        crossover: { dataId: 'crossover', text: 'Crossover ?', title: "Crossover filter", mode: 'equal' },
+        fandom_a: { dataId: 'fandom', text: 'Fandom A', title: "Fandom filter a", mode: 'contain' },
+        crossover: { dataId: 'crossover', text: '?', title: "Crossover filter", mode: 'equal' },
+        // Display only if there are crossover fanfictions
+        fandom_b: { dataId: 'fandom', text: 'Fandom B', title: "Fandom filter b", mode: 'contain', condition: { filterKey: 'crossover', value: 'X' } },
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre: { dataId: 'genre', text: 'Genre', title: "Genre filter", mode: 'contain' },
+        not_genre: { dataId: 'genre', text: 'Not Genre', title: "Genre reverse filter", mode: 'contain', reverse: true },
         chapters_gt: { dataId: 'chapters', text: '< Chapters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
         chapters_le: { dataId: 'chapters', text: 'Chapters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
@@ -129,7 +135,7 @@
     ].join(''));
 
     // css functions
-    // Make graduation of backgournd color from startHexColor to endHexColor
+    // Make graduation of background color from startHexColor to endHexColor
     // with gradationsLength steps by using colorSpace('rgb' or 'hsv').
     // Determine readable letterColor from [defaultForegroundHexColor, white, black] automatically.
     function makeGradualColorScheme (
@@ -271,7 +277,7 @@
 
     // Main
     // Check standard of filterDic
-    const defaultFilterDataKeys = ['dataId', 'text', 'title', 'mode', 'options', 'reverse'];
+    const defaultFilterDataKeys = ['dataId', 'text', 'title', 'mode', 'options', 'reverse', 'condition'];
     const modesRequireOptions = ['gt', 'ge', 'le', 'dateRange'];
     const filterDicUpToStandard = Object.keys(filterDic)
         .map(filterKey => {
@@ -449,7 +455,7 @@
         clearTag.click();
     };
 
-    // Restructrue elements for community, search and browse pages
+    // Restructure elements for community, search and browse pages
     // and add "Load all pages" button
     if (/www\.fanfiction\.net\/community\//.test(window.location.href)) {
         // Restructure elements of community page.
@@ -789,6 +795,12 @@
         }
 
         // Filter functions
+
+        // List of exceptional fandoms contain ' & '
+        // eslint-disable-next-line no-undef
+        const resourceText = GM_getResourceText('JSON');
+        const exceptionalFandomList = resourceText ? JSON.parse(resourceText).fandoms : [];
+
         // Make story data from .zList tag.
         const makeStoryData = (zList) => {
             const storyData = {};
@@ -798,9 +810,31 @@
             // https://greasyfork.org/ja/scripts/13486-fanfiction-net-unwanted-result-filter
             if (zList.dataset.title) {
                 storyData.title = zList.dataset.title;
-                storyData.crossover =
-                    parseInt(zList.dataset.crossover) ? 'Crossover' : 'Not Crossover';
-                storyData.fandom = zList.dataset.category;
+                storyData.crossover = parseInt(zList.dataset.crossover) ? 'X' : '=';
+                const rawFandom = zList.dataset.category;
+                if (storyData.crossover === 'X') {
+                    const splitFandoms = rawFandom.split(' & ');
+                    if (splitFandoms.length === 2) {
+                        storyData.fandom = splitFandoms.sort();
+                    } else {
+                        storyData.fandom = [];
+                        for (let fandom of exceptionalFandomList) {
+                            const i = rawFandom.indexOf(fandom);
+                            if (i !== -1) {
+                                const fandom2 =
+                                    (rawFandom.slice(0, i) + rawFandom.slice(i + fandom.length))
+                                        .replace(/^ & | & $/, '');
+                                storyData.fandom = [fandom, fandom2].sort();
+                                break;
+                            }
+                        }
+                        if (!storyData.fandom.length) {
+                            storyData.fandom = [rawFandom];
+                        }
+                    }
+                } else {
+                    storyData.fandom = [rawFandom];
+                }
                 storyData.rating = zList.dataset.rating;
                 storyData.language = zList.dataset.language;
                 storyData.genre = zList.dataset.genre
@@ -1261,7 +1295,6 @@
                 })();
 
                 initialSelectDic[filterKey] = {};
-                initialSelectDic[filterKey].menuDisabled = false;
                 initialSelectDic[filterKey].initialOptionDic = {};
                 const initialOptionDic = initialSelectDic[filterKey].initialOptionDic;
 
@@ -1301,7 +1334,6 @@
                     } else if (optionTags.length === 2) {
                         // if every stories has same value, disable filter.
                         selectTag.value = optionTags[1].value;
-                        initialSelectDic[filterKey].menuDisabled = true;
                         selectTag.setAttribute('disabled', '');
                     } else {
                         // else, add .fas-filter-menu_locked.
@@ -1396,6 +1428,20 @@
                 filterDiv.appendChild(filterTag);
                 filterDiv.appendChild(document.createTextNode(' '));
             });
+
+            // Don't display filter which doesn't meet a filterDic[filterKey].condtion
+            Object.keys(filterDic)
+                .filter(filterKey => filterDic[filterKey].condition)
+                .forEach(filterKey => {
+                    const condition = filterDic[filterKey].condition;
+                    const conditionInitialOptions =
+                        Object.keys(initialSelectDic[condition.filterKey].initialOptionDic);
+                    if (!conditionInitialOptions.includes(condition.value)) {
+                        const selectTag = [...filterDiv.children]
+                            .find(selectTag => selectTag.id === tabId + '_' + filterKey + '_select');
+                        selectTag.style.display = 'none';
+                    }
+                });
 
             // Add Clear button:
             // Clear filter settings and revert attributes and class according to initialSelectDic.

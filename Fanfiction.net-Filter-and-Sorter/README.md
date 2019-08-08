@@ -71,15 +71,19 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
     // text: text for filter select dom
     // title: title for filter select dom
     // mode: used to determine how to compare selectValue and storyValue in throughFilter()
-    // options: when mode is 'gt', 'ge', 'le' or 'dateRange', you have to specify.
+    // options: required when mode is 'gt', 'ge', 'le', 'dateRange'
     // reverse: reverse result of throughFilter()
+    // condition: display filter only if filter[filterKey] has defined value
     const filterDic = {
-        fandom: { dataId: 'fandom', text: 'Fandom', title: "Fandom filter", mode: 'contain' },
-        crossover: { dataId: 'crossover', text: 'Crossover ?', title: "Crossover filter", mode: 'equal' },
+        fandom_a: { dataId: 'fandom', text: 'Fandom A', title: "Fandom filter a", mode: 'contain' },
+        crossover: { dataId: 'crossover', text: '?', title: "Crossover filter", mode: 'equal' },
+        // Display only if there are crossover fictions
+        fandom_b: { dataId: 'fandom', text: 'Fandom B', title: "Fandom filter b", mode: 'contain', condition: { filterKey: 'crossover', value: 'X' } },
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         //language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre_a: { dataId: 'genre', text: 'Genre A', title: "Genre a filter", mode: 'contain' },
         genre_b: { dataId: 'genre', text: 'Genre B', title: "Genre b filter", mode: 'contain' },
+        not_genre: { dataId: 'genre', text: 'Not Genre', title: "Genre reverse filter", mode: 'contain', reverse: true },
         chapters_gt: { dataId: 'chapters', text: '< Chapters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
         chapters_le: { dataId: 'chapters', text: 'Chapters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
@@ -103,19 +107,23 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
 
 When filter mode is 'gt', 'ge', 'le' or 'dateRange', you have to specify options property. Also you can edit options by changing specified options property.
 
-For example, if you want to single out stories with greater than 200K word counts, add '200K' to wordCountOptions.
+For example, if you want to single out stories with updated within 3 months, add '3 months' to dateRangeOptions.
 
 ```javascript
     // Options for 'gt', 'ge', 'le', 'dateRange' mode.
+    // Options for chapters filters.
+    // Format: [\d+(K)?] in ascending order
+    const chapterOptions = ['1', '5', '10', '20', '30', '50'];
     // Options for word_count_gt and word_count_le filters.
     // Format: [\d+(K)?] in ascending order
-    const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K', '200K'];
+    const wordCountOptions = ['1K', '5K', '10K', '20K', '40K', '60K', '80K', '100K', '200K', '300K'];
     // Options for reviews, favs and follows filters.
     // Format: [\d+(K)?] in ascending order
-    const kudoCountOptions = ['10', '50', '100', '200', '400', '600', '800', '1K'];
+    const kudoCountOptions = ['10', '50', '100', '200', '400', '600', '800', '1K', '2K', '3K'];
     // Options for updated and published filters.
     // Format: [\d+ (hour|day|week|month|year)(s)?] in ascending order
-    const dateRangeOptions = ['24 hours', '1 week', '1 month', '6 months', '1 year', '3 years'];
+    const dateRangeOptions = ['24 hours', '1 week', '1 month', '3 months', '6 months', '1 year', '3 years', '5 years'];
+
 ```
 
 ### Sort characters of relationship
