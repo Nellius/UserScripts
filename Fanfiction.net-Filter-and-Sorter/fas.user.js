@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.61
+// @version      1.62
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -35,15 +35,16 @@
     // mode: used to determine how to compare selectValue and storyValue in throughFilter()
     // options: required when mode is 'gt', 'ge', 'le', 'dateRange'
     // reverse: reverse result of throughFilter()
-    // condition: only if filter[filterKey] has defined value, display filter
+    // condition: display filter only if filter[filterKey] has defined value
     const filterDic = {
         fandom_a: { dataId: 'fandom', text: 'Fandom A', title: "Fandom filter a", mode: 'contain' },
         crossover: { dataId: 'crossover', text: '?', title: "Crossover filter", mode: 'equal' },
-        // Display only if there are crossover fictions
+        // Display only if there are crossover fanfictions
         fandom_b: { dataId: 'fandom', text: 'Fandom B', title: "Fandom filter b", mode: 'contain', condition: { filterKey: 'crossover', value: 'X' } },
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre: { dataId: 'genre', text: 'Genre', title: "Genre filter", mode: 'contain' },
+        not_genre: { dataId: 'genre', text: 'Not Genre', title: "Genre reverse filter", mode: 'contain', reverse: true },
         chapters_gt: { dataId: 'chapters', text: '< Chapters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
         chapters_le: { dataId: 'chapters', text: 'Chapters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },

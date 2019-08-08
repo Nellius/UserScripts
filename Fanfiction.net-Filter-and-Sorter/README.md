@@ -73,7 +73,7 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
     // mode: used to determine how to compare selectValue and storyValue in throughFilter()
     // options: required when mode is 'gt', 'ge', 'le', 'dateRange'
     // reverse: reverse result of throughFilter()
-    // condition: only if filter[filterKey] has defined value, display filter
+    // condition: display filter only if filter[filterKey] has defined value
     const filterDic = {
         fandom_a: { dataId: 'fandom', text: 'Fandom A', title: "Fandom filter a", mode: 'contain' },
         crossover: { dataId: 'crossover', text: '?', title: "Crossover filter", mode: 'equal' },
@@ -83,6 +83,7 @@ For example, if you don't need 'Language' filter and 'Published' filter, comment
         //language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
         genre_a: { dataId: 'genre', text: 'Genre A', title: "Genre a filter", mode: 'contain' },
         genre_b: { dataId: 'genre', text: 'Genre B', title: "Genre b filter", mode: 'contain' },
+        not_genre: { dataId: 'genre', text: 'Not Genre', title: "Genre reverse filter", mode: 'contain', reverse: true },
         chapters_gt: { dataId: 'chapters', text: '< Chapters', title: "Chapter number greater than filter", mode: 'gt', options: chapterOptions },
         chapters_le: { dataId: 'chapters', text: 'Chapters ≤', title: "Chapter number less or equal filter", mode: 'le', options: chapterOptions },
         word_count_gt: { dataId: 'word_count', text: '< Words', title: "Word count greater than filter", mode: 'gt', options: wordCountOptions },
