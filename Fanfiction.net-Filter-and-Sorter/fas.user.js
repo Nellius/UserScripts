@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.6
+// @version      1.61
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
 // @match        https://www.fanfiction.net/*
 // @grant        GM_addStyle
+// @grant        GM_getResourceText
+// @resource     JSON https://raw.githubusercontent.com/Nellius/FanFiction-FandomData/master/json/exceptional-fandom.json
 // ==/UserScript==
 
 (function () {
@@ -31,11 +33,13 @@
     // text: text for filter select dom
     // title: title for filter select dom
     // mode: used to determine how to compare selectValue and storyValue in throughFilter()
-    // options: when mode is 'gt', 'ge', 'le', 'dateRange', you have to specify.
+    // options: required when mode is 'gt', 'ge', 'le', 'dateRange'
     // reverse: reverse result of throughFilter()
+    // condition: only if filter[filterKey] has defined value, display filter
     const filterDic = {
         fandom_a: { dataId: 'fandom', text: 'Fandom A', title: "Fandom filter a", mode: 'contain' },
         crossover: { dataId: 'crossover', text: '?', title: "Crossover filter", mode: 'equal' },
+        // Display only if there are crossover fictions
         fandom_b: { dataId: 'fandom', text: 'Fandom B', title: "Fandom filter b", mode: 'contain', condition: { filterKey: 'crossover', value: 'X' } },
         rating: { dataId: 'rating', text: 'Rating', title: "Rating filter", mode: 'equal' },
         language: { dataId: 'language', text: 'Language', title: "Language filter", mode: 'equal' },
@@ -80,142 +84,6 @@
 
     // Specify symbols to represent 'asc' and 'dsc'.
     const orderSymbol = { asc: '▲', dsc: '▼' };
-
-    // List of exceptional fandoms contain ' & '
-    const exceptionalFandomList = [
-        // Anime/Manga
-        "Tiger & Bunny/タイガー＆バニー",
-        "Panty & Stocking with Garterbelt/パンティ＆ストッキングwithガーターベルト",
-        "Muhyo & Roji",
-        "Devil & Devil",
-        "Bakusou Kyoudai Let's & Go/爆走兄弟レッツ＆ゴー!!",
-        "Allison & Lillia",
-        "High & Low - The Story of S.W.O.R.D.",
-        "Me & My Brothers",
-        "Carole & Tuesday/キャロル&チューズデイ",
-        "Prince & Hero/王子とヒーロー",
-        "Master of Ragnarok & Blesser of Einherjar/百錬の覇王と聖約の戦乙女",
-        "Knight's & Magic/ナイツ＆マジック",
-        "Baby & Me/赤ちゃんと僕",
-        "Sweetness & Lightning/甘々と稲妻",
-        "Half & Half/ハーフ・アンド・ハーフ",
-        // Books
-        "Lockwood & Co.",
-        "Penryn & the End of Days",
-        "Witch & Wizard",
-        "Jonathan Strange & Mr. Norrell",
-        "Marley & Me",
-        "Rizzoli & Isles Series",
-        "Cut & Run",
-        "Dirk & Steele",
-        "Kenny & the Dragon",
-        "Tall, Dark & Dangerous Series",
-        "Pride & Puberty",
-        "A Falcone & Driscoll Investigation",
-        // Catoons
-        "Miraculous: Tales of Ladybug & Cat Noir",
-        "Lilo & Stitch",
-        "Wolverine & the X-Men",
-        "Huntik: Secrets & Seekers",
-        "Mr. Peabody & Sherman",
-        "Grim Adventures of Billy & Mandy",
-        "Mickey Mouse & Friends",
-        "Ren & Stimpy Show",
-        "Edgar & Ellen",
-        "Ozzy & Drix",
-        "Mike, Lu & Og",
-        "Upin & Ipin",
-        "Prep & Landing",
-        "Brandy & Mr. Whiskers",
-        "Wallace & Gromit",
-        "Stretch Armstrong & the Flex Fighters",
-        "Tak & the Power of Juju",
-        "Love, Death & Robots",
-        // Comics
-        "Calvin & Hobbes",
-        "Locke & Key",
-        // Games
-        "Command & Conquer",
-        "Soul Nomad & the World Eaters",
-        "Sam & Max",
-        "Beyond Good & Evil",
-        "Puzzle & Dragons",
-        "Edna & Harvey",
-        "Blade & Soul/블레이드 앤 소울",
-        "Atelier Escha & Logy",
-        "Zack & Wiki",
-        "Sherlock Holmes: Crimes & Punishments",
-        // Misc
-        // Plays/Musicals
-        "Romeo & Juliet",
-        "Jekyll & Hyde",
-        "Bonnie & Clyde",
-        "BLACK & WHITE",
-        "John & Jen",
-        "Natasha, Pierre & the Great Comet of 1812",
-        "Frisky & Mannish",
-        // Movies
-        "Hansel & Gretel",
-        "Lilo & Stitch",
-        "Oliver & Company",
-        "Gnomeo & Juliet",
-        "Imagine Me & You",
-        "Cats & Dogs",
-        "Mr. & Mrs. Smith",
-        "Cowboys & Aliens",
-        "Prince & Me",
-        "Bill & Ted's Excellent Adventure/Bogus Journey",
-        "Love & Sex",
-        "21 & Over",
-        "Jekyll & Hyde",
-        "Peace, Love, & Misunderstanding",
-        "Planes, Trains & Automobiles",
-        "Between Love & Goodbye",
-        "Tango & Cash",
-        "Dungeons & Dragons",
-        "I Now Pronounce You Chuck & Larry",
-        "Ernest & Celestine/Ernest et Célestine",
-        // TV Shows
-        "Austin & Ally",
-        "Rizzoli & Isles",
-        "Home & Away",
-        "Drake & Josh",
-        "Alias Smith & Jones",
-        "Sam & Cat",
-        "Brothers & Sisters",
-        "Scott & Bailey",
-        "Sapphire & Steel",
-        "Melissa & Joey",
-        "Young & Hungry",
-        "Nicky, Ricky, Dicky & Dawn",
-        "Franklin & Bash",
-        "Hatfields & McCoys",
-        "Mork & Mindy",
-        "Dharma & Greg",
-        "Bucket & Skinner's Epic Adventures",
-        "Jekyll & Hyde",
-        "Lost & Found Music Studios",
-        "Randall & Hopkirk",
-        "Jack & Bobby",
-        "Mike & Molly",
-        "Two Guys & a Girl",
-        "Kenan & Kel",
-        "Jam & Jerusalem",
-        "Barney & Friends",
-        "Gavin & Stacey",
-        "King & Maxwell",
-        "Alexa & Katie",
-        "Hooten & the Lady",
-        "Grace & Favour/Are You Being Served? Again!",
-        "Cloak & Dagger",
-        "Jack & Jill",
-        "Law & Order: Division of Field Investigation/Закон и порядок: отдел оперативных расследований",
-        "Rosemary & Thyme",
-        "Black & White/痞子英雄",
-        "Law & Order: Los Angeles",
-        "Kate & Allie",
-        "Rock & Chips"
-    ];
 
     // css setting
     // [[backgroundColor, color]]
@@ -926,6 +794,12 @@
         }
 
         // Filter functions
+
+        // List of exceptional fandoms contain ' & '
+        // eslint-disable-next-line no-undef
+        const resourceText = GM_getResourceText('JSON');
+        const exceptionalFandomList = resourceText ? JSON.parse(resourceText).fandoms : [];
+
         // Make story data from .zList tag.
         const makeStoryData = (zList) => {
             const storyData = {};
