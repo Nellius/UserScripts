@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.7
+// @version      1.71
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -87,15 +87,16 @@
     const orderSymbol = { asc: '▲', dsc: '▼' };
 
     // css setting
+    // colorScheme definitions
     // [[backgroundColor, color]]
     const red = ['#ff1111', '#f96540', '#f4a26d', '#efcc99', 'white']
         .map(color => [color, getReadableColor(color, '#555')]);
 
     // const blue = makeGradualColorScheme('#11f', '#fff', 'rgb', 5, '#555');
-    // const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 'hsv', 5, '#555');
+    // const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 'hsl', 5, '#555');
     // const gold = makeGradualColorScheme('gold', 'darkgrey', 'rgb', 5);
 
-    // colorScheme setting
+    // select colorScheme
     const colorScheme = red;
 
     // Generate list of className for colorScheme automatically.
@@ -171,7 +172,7 @@
     };
 
     // Make graduation of background color from startColor to endColor
-    // with gradationsLength steps by using colorSpace('rgb' or 'hsv').
+    // with gradationsLength steps by using colorSpace('rgb', 'hsv' or 'hsl').
     // Determine readable foregroundColor from web safe color automatically.
     // eslint-disable-next-line no-unused-vars
     function makeGradualColorScheme (
@@ -209,8 +210,31 @@
             return [f(5), f(3), f(1)].map(x => Math.round(x * 255));
         };
 
+        function hsvToHsl (hsv) {
+            const [h, sHsv, v] = [hsv[0], hsv[1] / 100, hsv[2] / 100];
+            const l = v - v * sHsv / 2;
+            const m = Math.min(l, 1 - l);
+            const sHsl = m ? (v - l) / m : 0;
+            return [h, sHsl * 100, l * 100];
+        };
+
+        function hslToHsv (hsl) {
+            const [h, sHsl, l] = [hsl[0], hsl[1] / 100, hsl[2] / 100];
+            const v = l + sHsl * Math.min(l, 1 - l);
+            const sHsv = v === 0 ? 0 : 2 - 2 * l / v;
+            return [h, sHsv * 100, v * 100];
+        };
+
+        function rgbToHsl (rgb) {
+            return hsvToHsl(rgbToHsv(rgb));
+        }
+
+        function hslToRgb (hsl) {
+            return hsvToRgb(hslToHsv(hsl));
+        }
+
         // Check colorSpace
-        if (!['rgb', 'hsv'].includes(colorSpace)) {
+        if (!['rgb', 'hsv', 'hsl'].includes(colorSpace)) {
             throw new Error(`args of makeGradualColorScheme, ${colorSpace} is invalid.`);
         }
 
@@ -232,7 +256,7 @@
                             .map(x => Math.round(x));
                     });
                 return [startRgb, ...rgbMiddleGradationsByRgb, endRgb];
-            } else if (colorSpace === 'hsv') {
+            } else if (colorSpace === 'hsv' || colorSpace === 'hsl') {
                 // Convert rgb into hsv
                 const startHsv = rgbToHsv(startRgb);
                 const endHsv = rgbToHsv(endRgb);
@@ -254,6 +278,28 @@
                         return [h, s, v].map(x => Math.round(x));
                     }).map(x => hsvToRgb(x));
                 return [startRgb, ...rgbMiddleGradationsByHsv, endRgb];
+            } else if (colorSpace === 'hsl') {
+                // Convert rgb into hsl
+                const startHsl = rgbToHsl(startRgb);
+                const endHsl = rgbToHsl(endRgb);
+
+                // Make hsl gradations
+                const hslGradation = (() => {
+                    const hd = endHsl[0] - startHsl[0];
+                    const minHd = Math.abs(hd) < Math.abs(hd - 360) ? hd : hd - 360;
+                    const sd = endHsl[1] - startHsl[1];
+                    const ld = endHsl[2] - startHsl[2];
+                    return [minHd, sd, ld].map(x => x / (gradationsLength - 1));
+                })();
+                const rgbMiddleGradationsByHsl = [...Array(gradationsLength - 1).keys()]
+                    .slice(1)
+                    .map(gradationStep => {
+                        const h = (startHsl[0] + hslGradation[0] * gradationStep + 360) % 360;
+                        const s = startHsl[1] + hslGradation[1] * gradationStep;
+                        const l = startHsl[2] + hslGradation[2] * gradationStep;
+                        return [h, s, l].map(x => Math.round(x));
+                    }).map(x => hslToRgb(x));
+                return [startRgb, ...rgbMiddleGradationsByHsl, endRgb];
             }
         })();
 
