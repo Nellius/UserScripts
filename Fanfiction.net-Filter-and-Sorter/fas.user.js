@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.72
+// @version      1.8
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -804,6 +804,12 @@
             fragment.appendChild(document.createTextNode(' '));
             fragment.appendChild(loadBtn);
             badge.appendChild(fragment);
+        }
+    } else if (/www\.fanfiction\.net\/u\//.test(window.location.href)) {
+        // Hide bio automatically
+        const bioTag = document.getElementById('bio_text');
+        if (bioTag) {
+            bioTag.click();
         }
     }
 
