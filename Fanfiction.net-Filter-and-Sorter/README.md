@@ -137,12 +137,21 @@ For example, if you want to single out stories with updated within 3 months, add
 
 ### Change color scheme for options
 
-Default colorScheme is red. Blue and purple are also prepared.
-For example, if you want to try existing color scheme, change red to blue or purple.
+Default colorScheme is red. Blue, purple and gold colorSchemes are also prepared.
+For example, if you want to try a gold color scheme, uncomment a line `const gold...` and change red to gold.
 
 ```javascript
-    // colorScheme setting
-    const colorScheme = blue;
+    // colorScheme definitions
+    // [[backgroundColor, color]]
+    const red = ['#ff1111', '#f96540', '#f4a26d', '#efcc99', 'white']
+        .map(color => [color, getReadableColor(color, '#555')]);
+
+    // const blue = makeGradualColorScheme('#11f', '#fff', 'rgb', 5, '#555');
+    // const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 'hsl', 5, '#555');
+    const gold = makeGradualColorScheme('gold', 'darkgrey', 'rgb', 5);
+
+    // select colorScheme
+    const colorScheme = gold;
 ```
 
 You can make colorScheme manually.
@@ -150,7 +159,6 @@ You can make colorScheme manually.
 ```javascript
     // colorScheme setting
     // Format: [['backgroundColor', 'foregroundColor'], . . . ]
-    // green, yellow, red, white
     const colorScheme = [['#05f005', 'black'], ['#f0f005', 'black'], ['#f00505', 'black'], ['white', 'black']];
 ```
 
@@ -158,14 +166,14 @@ You can also make colorScheme gradations automatically by using makeGradualColor
 
 ```javascript
     // colorScheme setting
-    // '#64DD17': start of gradations, 3 or 6 digit hex color
-    // '#F1F8E9': end of gradations, 3 or 6 digit hex color
-    // 'hsv': color space to make gradations, 'hsv' or 'rgb'
+    // '#64DD17': start of gradations, 3 or 6 digit hex color or color name
+    // '#F1F8E9': end of gradations, 3 or 6 digit hex color or color name
+    // 'hsv': color space to make gradations, 'rgb', 'hsv' or 'hsl'
     // 4: length of gradations, number
-    // '#555': default foreground color, 3 or 6 digit hex color
-    // If '#555' is unreadable on generated background color,
-    // it change to white or black automatically.
-    const colorScheme = makeGradualColorScheme('#64DD17', '#F1F8E9', 'hsv', 4, '#555');
+    // 'black': default foreground color, 3 or 6 digit hex color or color name
+    // If 'black' is unreadable on generated background color,
+    // it change to readable color automatically.
+    const colorScheme = makeGradualColorScheme('#64DD17', '#F1F8E9', 'hsv', 4, 'black');
 ```
 
 ## Sorter Setting
