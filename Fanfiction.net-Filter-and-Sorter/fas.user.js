@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.71
+// @version      1.72
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -360,9 +360,9 @@
                 'contrastComplianceAA': contrastRatio >= contrastRatioThresholdAA,
                 'contrastComplianceAAA': contrastRatio >= contrastRatioThresholdAAA,
                 'hueDiff': hueDiff,
-                'hueDiffCompliance': hueDiff > hueThreshold,
+                'hueDiffCompliance': hueDiff >= hueThreshold,
                 'brightnessDiff': brightnessDiff,
-                'brightnessDiffCompliance': brightnessDiff > brightnessThreshold
+                'brightnessDiffCompliance': brightnessDiff >= brightnessThreshold
             };
         };
 
