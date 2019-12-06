@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.8
+// @version      1.81
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
 // @match        https://www.fanfiction.net/*
+// @exclude      /^https://www\.fanfiction\.net/s//
+// @exclude      /^https://www\.fanfiction\.net/r//
 // @grant        GM_addStyle
 // @grant        GM_getResourceText
 // @resource     JSON https://raw.githubusercontent.com/Nellius/FanFiction-FandomData/master/json/exceptional-fandom.json
