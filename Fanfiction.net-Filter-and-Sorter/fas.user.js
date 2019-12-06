@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.82
+// @version      1.83
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -808,9 +808,9 @@
             badge.appendChild(fragment);
         }
     } else if (/www\.fanfiction\.net\/u\//.test(window.location.href)) {
-        // Hide bio automatically
+        // Hide author biography automatically
         const bioTag = document.getElementById('bio_text');
-        if (bioTag) {
+        if (bioTag && bioTag.textContent === "hide bio") {
             bioTag.click();
         }
     }
