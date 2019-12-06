@@ -43,7 +43,16 @@ Add filters and additional sorters to author, browse, community and search pages
 - Favs
 - Follows
 
-## Filter setting
+## Author Biography Setting
+
+Whether or not hide author biography automatically by clicking `hide bio` button.
+
+```javascript
+    // Author Biography Setting
+    const HIDE_BIO_AUTOMATICALLY = true;
+```
+
+## Filter Setting
 
 ### Manage filters
 
@@ -141,7 +150,8 @@ Default colorScheme is red. Blue, purple and gold colorSchemes are also prepared
 For example, if you want to try a gold color scheme, uncomment a line `const gold...` and change red to gold.
 
 ```javascript
-    // colorScheme definitions
+    // Css Setting
+    // ColorScheme definitions
     // [[backgroundColor, color]]
     const red = ['#ff1111', '#f96540', '#f4a26d', '#efcc99', 'white']
         .map(color => [color, getReadableColor(color, '#555')]);
@@ -150,14 +160,14 @@ For example, if you want to try a gold color scheme, uncomment a line `const gol
     // const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 'hsl', 5, '#555');
     const gold = makeGradualColorScheme('gold', 'darkgrey', 'rgb', 5);
 
-    // select colorScheme
+    // Select colorScheme
     const colorScheme = gold;
 ```
 
 You can make colorScheme manually.
 
 ```javascript
-    // colorScheme setting
+    // Select colorScheme
     // Format: [['backgroundColor', 'foregroundColor'], . . . ]
     const colorScheme = [['#05f005', 'black'], ['#f0f005', 'black'], ['#f00505', 'black'], ['white', 'black']];
 ```
@@ -165,7 +175,7 @@ You can make colorScheme manually.
 You can also make colorScheme gradations automatically by using makeGradualColorScheme function. Change arguments to suit your preference.
 
 ```javascript
-    // colorScheme setting
+    // Select colorScheme
     // '#64DD17': start of gradations, 3 or 6 digit hex color or color name
     // '#F1F8E9': end of gradations, 3 or 6 digit hex color or color name
     // 'hsv': color space to make gradations, 'rgb', 'hsv' or 'hsl'
