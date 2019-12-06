@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.83
+// @version      1.84
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -122,8 +122,9 @@
         ".fas-badge { color: #555; padding-top: 8px; padding-bottom: 8px; }",
         ".fas-badge-number { color: #fff; background-color: #999; padding-right: 9px; padding-left: 9px; border-radius: 9px }",
         ".fas-badge-number:hover { background-color: #555;}",
-        ".fas-progress {  width: 1%; height: 10px; background-color: #4caf50; }",
-        ".fas-progress-bar {  width: 100%; background-color: #ccc;}",
+        ".fas-progress { width: 1%; height: 10px; background-color: #4caf50; }",
+        ".fas-progress-bar { width: 100%; background-color: #ccc;}",
+        ".fas-loaded-page { text-decoration: line-through !important; }",
         ".fas-sorter-div { color: gray; font-size: .9em; }",
         ".fas-sorter { color: gray; }",
         ".fas-sorter:after { content: attr(data-order); }",
@@ -576,6 +577,12 @@
         const inside = document.getElementById(this.tabId + '_inside');
         loadedZListTags.forEach(x => {
             inside.appendChild(x);
+        });
+
+        // Render page links in the strikethrough style.
+        const aTags = document.querySelectorAll('#l_cs > a, #content_wrapper_inner > center > a');
+        [...aTags].forEach(aTag => {
+            aTag.classList.add('fas-loaded-page');
         });
 
         // Reset filter
