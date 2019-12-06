@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.81
+// @version      1.82
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -859,8 +859,12 @@
                 } else if (aData[dataId] > bData[dataId]) {
                     return order === 'asc' ? 1 : -1;
                 } else {
-                    const sortByTitle = makeSorterFunctionBy('title');
-                    return sortByTitle(a, b);
+                    if (dataId !== 'title') {
+                        const sortByTitle = makeSorterFunctionBy('title');
+                        return sortByTitle(a, b);
+                    } else {
+                        return 0;
+                    }
                 }
             };
             return sorterFunctionBy;
