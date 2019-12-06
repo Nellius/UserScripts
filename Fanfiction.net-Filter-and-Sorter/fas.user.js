@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.84
+// @version      1.85
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -16,7 +16,10 @@
 (function () {
     'use strict';
 
-    // Filter Setting
+    // Author Biography Setting
+    const HIDE_BIO_AUTOMATICALLY = true;
+
+    // Filter setting
     // Options for 'gt', 'ge', 'le', 'dateRange' mode.
     // Options for chapters filters.
     // Format: [\d+(K)?] in ascending order
@@ -88,8 +91,8 @@
     // Specify symbols to represent 'asc' and 'dsc'.
     const orderSymbol = { asc: '▲', dsc: '▼' };
 
-    // css setting
-    // colorScheme definitions
+    // Css Setting
+    // ColorScheme definitions
     // [[backgroundColor, color]]
     const red = ['#ff1111', '#f96540', '#f4a26d', '#efcc99', 'white']
         .map(color => [color, getReadableColor(color, '#555')]);
@@ -98,7 +101,7 @@
     // const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 'hsl', 5, '#555');
     // const gold = makeGradualColorScheme('gold', 'darkgrey', 'rgb', 5);
 
-    // select colorScheme
+    // Select colorScheme
     const colorScheme = red;
 
     // Generate list of className for colorScheme automatically.
@@ -816,9 +819,11 @@
         }
     } else if (/www\.fanfiction\.net\/u\//.test(window.location.href)) {
         // Hide author biography automatically
-        const bioTag = document.getElementById('bio_text');
-        if (bioTag && bioTag.textContent === "hide bio") {
-            bioTag.click();
+        if (HIDE_BIO_AUTOMATICALLY) {
+            const bioTag = document.getElementById('bio_text');
+            if (bioTag && bioTag.textContent === "hide bio") {
+                bioTag.click();
+            }
         }
     }
 
