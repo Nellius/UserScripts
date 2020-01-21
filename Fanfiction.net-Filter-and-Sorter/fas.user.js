@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.85
+// @version      1.87
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -19,7 +19,7 @@
     // Author Biography Setting
     const HIDE_BIO_AUTOMATICALLY = true;
 
-    // Filter setting
+    // Filter Setting
     // Options for 'gt', 'ge', 'le', 'dateRange' mode.
     // Options for chapters filters.
     // Format: [\d+(K)?] in ascending order
@@ -408,6 +408,12 @@
         return rgbToHexColor(foregroundRgbs[sortedColorContrasts[0].index]);
     };
 
+    // Regex functions
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#Escaping
+    function escapeRegExp (string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+    }
+
     // Main
     // Check standard of filterDic
     const defaultFilterDataKeys = ['dataId', 'text', 'title', 'mode', 'options', 'reverse', 'condition'];
@@ -558,7 +564,7 @@
             const zListTags = await getZListTags(this.urls[i]);
             [...zListTags].forEach(x => {
                 setDatasetToZListTag(x);
-                if (!x.dataset.category) {
+                if (!x.dataset.category && !x.dataset.crossover) {
                     x.dataset.category = fandomData.category;
                     x.dataset.crossover = fandomData.crossover;
                 }
@@ -844,7 +850,8 @@
         [...zListTags].forEach(x => {
             setDatasetToZListTag(x);
         });
-        if (!zListTags[0].dataset.category) {
+        const datasetIncludeCategory = [...zListTags].some(x => x.dataset.category);
+        if (!datasetIncludeCategory) {
             const fandomData = getFandomData();
             [...zListTags].forEach(x => {
                 x.dataset.category = fandomData.category;
@@ -969,12 +976,14 @@
                         storyData.fandom = splitFandoms.sort();
                     } else {
                         storyData.fandom = [];
+
                         for (let fandom of exceptionalFandomList) {
-                            const i = rawFandom.indexOf(fandom);
-                            if (i !== -1) {
-                                const fandom2 =
-                                    (rawFandom.slice(0, i) + rawFandom.slice(i + fandom.length))
-                                        .replace(/^ & | & $/, '');
+                            const escapedFandom = escapeRegExp(fandom);
+                            const fandomRegex =
+                                new RegExp('^' + escapedFandom + " & (.+)$|^(.+) & " + escapedFandom + '$', '');
+                            const matches = rawFandom.match(fandomRegex);
+                            if (matches) {
+                                const fandom2 = matches[1] || matches[2];
                                 storyData.fandom = [fandom, fandom2].sort();
                                 break;
                             }
@@ -1144,7 +1153,7 @@
             return selectDic;
         };
 
-        // generateCombinations([1, 2, 3], 2) === [[1, 2], [1, 3], [2, 3]]
+        // generateCombinations([1, 2, 3], 2) => [[1, 2], [1, 3], [2, 3]]
         const generateCombinations = (xs, count, previous = []) => {
             if (count === 0) {
                 return [previous];
