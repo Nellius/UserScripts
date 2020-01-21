@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fanfiction.net: Filter and Sorter
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.86
+// @version      1.87
 // @license      MIT
 // @description  Add filters and additional sorters and "Load all pages" button to Fanfiction.net.
 // @author       Vannius
@@ -407,6 +407,12 @@
         // Return readable foreground hexColor
         return rgbToHexColor(foregroundRgbs[sortedColorContrasts[0].index]);
     };
+
+    // Regex functions
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#Escaping
+    function escapeRegExp (string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+    }
 
     // Main
     // Check standard of filterDic
@@ -970,12 +976,14 @@
                         storyData.fandom = splitFandoms.sort();
                     } else {
                         storyData.fandom = [];
+
                         for (let fandom of exceptionalFandomList) {
-                            const i = rawFandom.indexOf(fandom);
-                            if (i !== -1) {
-                                const fandom2 =
-                                    (rawFandom.slice(0, i) + rawFandom.slice(i + fandom.length))
-                                        .replace(/^ & | & $/, '');
+                            const escapedFandom = escapeRegExp(fandom);
+                            const fandomRegex =
+                                new RegExp('^' + escapedFandom + " & (.+)$|^(.+) & " + escapedFandom + '$', '');
+                            const matches = rawFandom.match(fandomRegex);
+                            if (matches) {
+                                const fandom2 = matches[1] || matches[2];
                                 storyData.fandom = [fandom, fandom2].sort();
                                 break;
                             }
