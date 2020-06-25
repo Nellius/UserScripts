@@ -560,7 +560,9 @@
         const loadedZListTags = [];
         const fandomData = getFandomData();
         for (let i = 0; i < this.urls.length; i++) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (i !== 0) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
             const zListTags = await getZListTags(this.urls[i]);
             [...zListTags].forEach(x => {
                 setDatasetToZListTag(x);
