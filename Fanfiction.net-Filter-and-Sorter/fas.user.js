@@ -94,8 +94,10 @@
     // Css Setting
     // ColorScheme definitions
     // [[backgroundColor, color]]
-    const red = ['#ff1111', '#f96540', '#f4a26d', '#efcc99', 'white']
-        .map(color => [color, getReadableColor(color, '#555')]);
+    const red = [
+        // ['#ff1111', '#f96540', '#f4a26d', '#efcc99', 'white'].map(color => [color, getReadableColor(color, '#555')]) =>
+        ['#ff1111', "#000033"], ["#f96540", "#000099"], ["#f4a26d", "#000000"], ["#efcc99", "#000000"], ["white", "#000000"]
+    ];
 
     // const blue = makeGradualColorScheme('#11f', '#fff', 'rgb', 5, '#555');
     // const purple = makeGradualColorScheme('#cd47fd', '#e8eaf6', 'hsl', 5, '#555');
@@ -560,7 +562,9 @@
         const loadedZListTags = [];
         const fandomData = getFandomData();
         for (let i = 0; i < this.urls.length; i++) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (i !== 0) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
             const zListTags = await getZListTags(this.urls[i]);
             [...zListTags].forEach(x => {
                 setDatasetToZListTag(x);
