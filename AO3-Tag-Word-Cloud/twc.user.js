@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3: Tag Word Cloud
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.0
+// @version      1.1
 // @license      MIT
 // @description  Change font size of words of AO3 tags according to the word frequency in each chapter or entire works.
 // @author       Vannius
@@ -34,7 +34,7 @@
         // interrogative
         'how', 'why', 'when', 'where',
         // preposition
-        'to', 'for', 'from', 'up', 'down', 'in', 'on', 'at', 'off', 'into',
+        'to', 'for', 'from', 'up', 'down', 'in', 'out', 'on', 'at', 'off', 'into',
         'around', 'among', 'between', 'of', 'over', 'above', 'below', 'under',
         'through', 'across', 'along', 'near', 'by', 'beside', 'with', 'without',
         // conjunction
@@ -44,6 +44,8 @@
         'plus', 'providing', 'save', 'since', 'so',
         'than', 'though', 'till', 'unless', 'until',
         'whenever', 'whereas', 'wherever', 'whether', 'while', 'without', 'yet',
+        // adverb
+        'just', 'there',
         // pronouns
         'i', 'my', 'me', 'mine', 'myself',
         'you', 'your', 'yours', 'yourself', 'yourselves',
