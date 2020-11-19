@@ -5,6 +5,8 @@
 Hide tags when there are too many tags automatically on AO3.
 Add hide/show tags button to browsing page and reading page.
 
+[\[Install\]](https://github.com/Nellius/UserScripts/raw/master/AO3-Tag-Hider/th.user.js) [\[Source\]](https://github.com/Nellius/UserScripts/blob/master/AO3-Tag-Hider/th.user.js) [\[Greasy Fork\]](https://greasyfork.org/ja/scripts/369423-ao3-tag-hider)
+
 ## Config
 
 ### Browsing page: except of `https://archiveofourown.org/works/*`
