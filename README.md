@@ -11,6 +11,9 @@ Add filters and additional sorters to author page. [\[Install\]](https://github.
 
 ### [Archive of Our Own](https://archiveofourown.org/)
 
+- [AO3: Tag Hider](https://github.com/Nellius/UserScripts/tree/master/AO3-Tag-Hider)
+Hide tags automatically when there are too many tags. Add hide/show tags button to browsing page and reading page. [\[Install\]](https://github.com/Nellius/UserScripts/raw/master/AO3-Tag-Hider/th.user.js) [\[Source\]](https://github.com/Nellius/UserScripts/blob/master/AO3-Tag-Hider/th.user.js) [\[Greasy Fork\]](https://greasyfork.org/ja/scripts/369423-ao3-tag-hider)
+
 - [AO3: Tag Word Cloud](https://github.com/Nellius/UserScripts/tree/master/AO3-Tag-Word-Cloud)
 Change font size of words of AO3 tags according to the word frequency in each chapter or entire works. [\[Install\]](https://github.com/Nellius/UserScripts/raw/master/AO3-Tag-Word-Cloud/twc.user.js) [\[Source\]](https://github.com/Nellius/UserScripts/blob/master/AO3-Tag-Word-Cloud/twc.user.js) [\[Greasy Fork\]](https://greasyfork.org/ja/scripts/408055-ao3-tag-word-cloud)
 
