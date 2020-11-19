@@ -7,7 +7,7 @@ Add hide/show tags button to browsing page and reading page.
 
 ## Config
 
-### Browsing page: except of https://archiveofourown.org/works/*
+### Browsing page: except of `https://archiveofourown.org/works/*`
 
 ```javascript
 const MAX_TAGS_ON_BROWSING_PAGE = 15;
@@ -20,7 +20,7 @@ An example of browsing page when `MAX_TAGS_ON_BROWSING_PAGE = 15`
 
 ![MAX_TAGS_ON_BROWSING_PAGE = 15](https://github.com/Nellius/UserScripts/raw/master/AO3-Tag-Hider/images/th-demo-browsing-page.gif)
 
-### Reading page: https://archiveofourown.org/works/*
+### Reading page: `https://archiveofourown.org/works/*`
 
 ```javascript
 const MAX_TAGS_ON_READING_PAGE = 0;
