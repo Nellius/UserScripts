@@ -4,7 +4,7 @@
 
 Add filters and additional sorters to author, browse, community and search pages of Fanfiction.net. Add "Load all pages" button to browse, community and search pages.
 
-[\[Install\]](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Source\]](https://github.com/Nellius/UserScripts/blob/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Greasy Fork\]](https://greasyfork.org/ja/scripts/377000-fanfiction-net-filter-and-sorter)
+[\[Install\]](https://github.com/Nellius/UserScripts/raw/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Source\]](https://github.com/Nellius/UserScripts/blob/master/Fanfiction.net-Filter-and-Sorter/fas.user.js) [\[Greasy Fork\]](https://greasyfork.org/en/scripts/377000-fanfiction-net-filter-and-sorter)
 
 ### Demo
 

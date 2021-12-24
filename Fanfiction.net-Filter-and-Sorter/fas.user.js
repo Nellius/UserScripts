@@ -456,9 +456,12 @@
 
             // These dataset are defined in author page.
             if (!x.dataset.story_id) {
-                const url = new URL(x.firstElementChild.href);
+                // FicLab add .ficlab-save tag at the place of first child of .z-list tag.
+                // https://www.ficlab.com/
+                const titleTag = x.getElementsByClassName('stitle')[0];
+                const url = new URL(titleTag.href);
                 x.dataset.storyid = url.pathname.split('/')[2];
-                x.dataset.title = x.firstElementChild.textContent;
+                x.dataset.title = titleTag.textContent;
                 x.dataset.category = matches[2] ? matches[2].replace(/ - $/g, '') : '';
                 x.dataset.chapters = matches[6].replace(/[^\d]/g, '');
                 x.dataset.wordcount = matches[7].replace(/[^\d]/g, '');
