@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3: Tag Word Cloud
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.1
+// @version      1.2
 // @license      MIT
 // @description  Change font size of words of AO3 tags according to the word frequency in each chapter or entire works.
 // @author       Vannius
@@ -16,7 +16,7 @@
     const MAX_FONT_SCALE = 200; // %
     const MIN_FONT_SCALE = 80; // %
     const FREEFORM_TAGS = true; // Apply TWC to freeform tags.
-    const AUTO_TWC_ON_READING_PAGE = true; // Apply TWO automatically on reading page.
+    const AUTO_TWC_ON_READING_PAGE = true; // Apply TWC automatically on reading page.
 
     const ignoreWordList = [
         // article
@@ -35,17 +35,19 @@
         'how', 'why', 'when', 'where',
         // preposition
         'to', 'for', 'from', 'up', 'down', 'in', 'out', 'on', 'at', 'off', 'into',
-        'around', 'among', 'between', 'of', 'over', 'above', 'below', 'under',
+        'about', 'around', 'among', 'between', 'of', 'over', 'above', 'below', 'under',
         'through', 'across', 'along', 'near', 'by', 'beside', 'with', 'without',
         // conjunction
         'after', 'also', 'although', 'and', 'as', 'because', 'before', 'but',
-        'considering', 'directly', 'except', 'for', 'however', 'if', 'immediately',
+        'considering', 'directly', 'except', 'however', 'if', 'immediately',
         'lest', 'like', 'nor', 'now', 'notwithstanding', 'once', 'only', 'or',
         'plus', 'providing', 'save', 'since', 'so',
         'than', 'though', 'till', 'unless', 'until',
-        'whenever', 'whereas', 'wherever', 'whether', 'while', 'without', 'yet',
+        'whenever', 'whereas', 'wherever', 'whether', 'while', 'without',
         // adverb
-        'just', 'there',
+        'already', 'back', 'just', 'more', 'much', 'still', 'yet', 'there', 'very',
+        // adjective
+        'good', 'bad', 'big', 'dark', 'little', 'own',
         // pronouns
         'i', 'my', 'me', 'mine', 'myself',
         'you', 'your', 'yours', 'yourself', 'yourselves',
@@ -59,7 +61,11 @@
         'neither', 'nobody', 'none', 'no one', 'nothing', 'one', 'other', 'others',
         'several', 'some', 'somebody', 'someone', 'something',
         'as', 'such', 'that', 'these', 'this', 'those',
-        'what', 'whatever', 'which', 'whichever', 'who', 'whoever', 'whom', 'whomever', 'whose'
+        'what', 'whatever', 'which', 'whichever', 'who', 'whoever', 'whom', 'whomever', 'whose',
+        // noun
+        'aunt', 'brother', 'daughter', 'father', 'mother', 'son', 'sister', 'uncle',
+        'female', 'male',
+        'being', 'king', 'lady', 'lord', 'time', 'queen'
     ];
 
     // Functions

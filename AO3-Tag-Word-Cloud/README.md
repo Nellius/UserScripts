@@ -17,7 +17,7 @@ This script change font size of words of AO3 tags according to the word frequenc
     const MAX_FONT_SCALE = 200; // %
     const MIN_FONT_SCALE = 80; // %
     const FREEFORM_TAGS = true; // Apply TWC to freeform tags.
-    const AUTO_TWC_ON_READING_PAGE = true; // Apply TWO automatically on reading page.
+    const AUTO_TWC_ON_READING_PAGE = true; // Apply TWC automatically on reading page.
 ```
 
 ## Compatible
