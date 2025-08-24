@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         AO3: Tag Word Cloud
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.2
+// @version      1.5
 // @license      MIT
 // @description  Change font size of words of AO3 tags according to the word frequency in each chapter or entire works.
 // @author       Vannius
-// @grant        GM_addStyle
 // @match        https://archiveofourown.org/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=archiveofourown.org
+// @grant        GM_addStyle
 // ==/UserScript==
 
 (function () {
@@ -17,6 +18,12 @@
     const MIN_FONT_SCALE = 80; // %
     const FREEFORM_TAGS = true; // Apply TWC to freeform tags.
     const AUTO_TWC_ON_READING_PAGE = true; // Apply TWC automatically on reading page.
+
+    // Treat related words as a group and add up the count of all words in that group
+    const relatedWordGroups = [ // Lowercase only
+        [ 'cat', 'catelyn'], // Add up the count of "cat" and the count of "catelyn"
+        [ 'eddard', 'ned']   // Add up the count of "eddard" and the count of "ned"
+    ];
 
     const ignoreWordList = [
         // article
@@ -128,33 +135,75 @@
         const wordList = [...ao3Tags]
             .flatMap(tag => tag.textContent.toLowerCase().split(/\W/g))
             .filter(x => x && !ignoreWordList.includes(x) && !/\d+/.test(x));
+        // Add words by relatedWordGroups
+        relatedWordGroups.forEach(relatedWords => {
+            if (relatedWords.some(item => wordList.includes(item))) {
+                wordList.push(...relatedWords);
+            }
+        });
         const uniqueWordList = [...new Set(wordList)];
         if (!uniqueWordList.length) {
             return;
         }
-        console.log(uniqueWordList);
+        console.log("uniqueWordList", uniqueWordList);
 
         // Count word frequency in each pTag by using regex.
-        const wordDic = {};
+        const individualWordCounts = {};
+        uniqueWordList.forEach(uniqueWord => {
+            individualWordCounts[uniqueWord] = 0;
+        });
+
         const wordsRegex = RegExp(uniqueWordList.map(word => '\\b' + word + '\\b').join('|'), 'gi');
         for (let pTag of pTags) {
             const matches = pTag.textContent.match(wordsRegex);
             if (matches) {
                 for (let match of matches) {
                     match = match.toLowerCase();
-                    wordDic[match] = match in wordDic ? wordDic[match] + 1 : 1;
+                    individualWordCounts[match] += 1;
                 }
             }
         }
-        if (!Object.keys(wordDic).length) {
+        if (!Object.keys(individualWordCounts).length) {
             return;
         }
-        console.log(wordDic);
+        console.log("individualWordCounts", individualWordCounts);
+
+        // Make wordToGroupMap
+        const wordToGroupMap = new Map();
+        relatedWordGroups.forEach(group => {
+            group.forEach(word1 => {
+                if (!wordToGroupMap.has(word1)) {
+                    wordToGroupMap.set(word1, new Set());
+                }
+                // Aggregating words that appear across multiple groups
+                group.forEach(word2 => wordToGroupMap.get(word1).add(word2));
+            });
+        });
+        if (wordToGroupMap.size > 0) {
+            console.log("wordToGroupMap", wordToGroupMap);
+        }
+
+        // Make groupTotalCounts
+        const groupTotalCounts = {};
+        Object.keys(individualWordCounts).forEach(key => {
+            if (wordToGroupMap.has(key)) {
+                const relatedWords = [...wordToGroupMap.get(key)];
+                const totalCount = relatedWords.reduce((sum, word) => {
+                    return sum + (individualWordCounts[word] || 0);
+                }, 0);
+                groupTotalCounts[key] = totalCount;
+            } else {
+                groupTotalCounts[key] = individualWordCounts[key];
+            }
+        });
+        if (Object.keys(groupTotalCounts).length) {
+            console.log("groupTotalCounts", groupTotalCounts);
+        }
 
         // Calculate counts
-        const totalCount = Object.values(wordDic).reduce((p, y) => p + y, 0);
-        const maxCount = Object.values(wordDic).reduce((p, y) => p > y ? p : y);
-        const minCount = Object.values(wordDic).reduce((p, y) => p < y ? p : y);
+        const totalCount = Object.values(individualWordCounts).reduce((p, y) => p + y, 0);
+        const maxCount = Object.values(individualWordCounts).reduce((p, y) => p > y ? p : y);
+        const minCount = Object.values(individualWordCounts).reduce((p, y) => p < y ? p : y);
 
         // Change font size of word of AO3 tags by the word frequency
         // by replacing each AO3 tags
@@ -171,13 +220,21 @@
                     // Other than space
                     const spanTag = document.createElement('span');
                     spanTag.textContent = text;
-                    if (text.toLowerCase() in wordDic) {
+                    text = text.toLowerCase();
+                    if (text in groupTotalCounts) {
                         // Calculate font size of text according to text count
                         // from MIN_FONT_SCALE to MAX_FONT_SCALE
-                        const count = wordDic[text.toLowerCase()];
-                        spanTag.title =
-                            count + '/' + totalCount + ' counts ' +
-                            Math.round(count / totalCount * 1000) / 10 + '%';
+                        const count = groupTotalCounts[text];
+                        const percentage = Math.round(count / totalCount * 1000) / 10;
+                        spanTag.title = `${count}/${totalCount} counts ${percentage}%`;
+
+                        if (wordToGroupMap.has(text)) {
+                            const relatedWords = [...wordToGroupMap.get(text)].sort();
+                            spanTag.title += '\n' + relatedWords
+                                .map(word => `${word}: ${individualWordCounts[word] || 0}`)
+                                .join('\n');
+                        }
+
                         const fontScale =
                             (count - minCount) * (MAX_FONT_SCALE - MIN_FONT_SCALE) /
                             (maxCount - minCount);
