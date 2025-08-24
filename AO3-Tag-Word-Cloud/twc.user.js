@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3: Tag Word Cloud
 // @namespace    https://greasyfork.org/en/users/163551-vannius
-// @version      1.5
+// @version      1.6
 // @license      MIT
 // @description  Change font size of words of AO3 tags according to the word frequency in each chapter or entire works.
 // @author       Vannius
@@ -21,8 +21,8 @@
 
     // Treat related words as a group and add up the count of all words in that group
     const relatedWordGroups = [ // Lowercase only
-        [ 'cat', 'catelyn'], // Add up the count of "cat" and the count of "catelyn"
-        [ 'eddard', 'ned']   // Add up the count of "eddard" and the count of "ned"
+        [ 'cat', 'catelyn' ], // Add up the count of "cat" and the count of "catelyn"
+        [ 'eddard', 'ned' ]   // Add up the count of "eddard" and the count of "ned"
     ];
 
     const ignoreWordList = [
