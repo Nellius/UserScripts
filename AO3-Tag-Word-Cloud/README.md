@@ -18,6 +18,12 @@ This script change font size of words of AO3 tags according to the word frequenc
     const MIN_FONT_SCALE = 80; // %
     const FREEFORM_TAGS = true; // Apply TWC to freeform tags.
     const AUTO_TWC_ON_READING_PAGE = true; // Apply TWC automatically on reading page.
+
+    // Treat related words as a group and add up the count of all words in that group
+    const relatedWordGroups = [ // Lowercase only
+        [ 'cat', 'catelyn'], // Add up the count of "cat" and the count of "catelyn"
+        [ 'eddard', 'ned']   // Add up the count of "eddard" and the count of "ned"
+    ];
 ```
 
 ## Compatible
